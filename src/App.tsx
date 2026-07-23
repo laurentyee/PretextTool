@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import sourceText from '../source-text.md?raw'
+import sourceText from '../assets/source-text.md?raw'
 import Stage from './components/Stage'
 import Toolbar from './components/Toolbar'
 import HelpModal from './components/HelpModal'
