@@ -4,9 +4,14 @@ import {
   dist,
   drawStrokePath,
   hitTest,
+  rainbowGradient,
+  stickerRect,
   transformedPoints,
-  type Doodle,
+  type Bbox,
+  type Mark,
   type Point,
+  type StickerMark,
+  type StrokeMark,
 } from './doodleGeometry'
 import {
   computeSlots,
@@ -17,23 +22,28 @@ import {
   type ParagraphState,
   type TextDraw,
 } from './textFlow'
+import { DEFAULT_STICKER_ID, loadStickerImage, STICKERS } from './stickers'
 
-export type Tool = 'brush' | 'select'
+export type Tool = 'brush' | 'select' | 'sticker'
 
 export type SceneSnapshot = {
   tool: Tool
   color: string
   brushSize: number
   canUndo: boolean
+  canRedo: boolean
   selectedScale: number | null
+  stickerId: string
 }
 
 export const BRUSH_COLORS = ['#D4FF3D', '#FF5C7A', '#4CC9FF', '#FFD23D']
+export const RAINBOW = 'rainbow' as const
 
-const FONT_SIZE = 20
+const FONT_SIZE = 14
 const LINE_HEIGHT = 26
 export const MONO_FONT_STACK = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
 const TEXT_COLOR = 'rgba(201,205,211,0.92)'
+const STICKER_MAX_DIM = 170
 
 type DragInfo = { id: number; startX: number; startY: number; dx0: number; dy0: number }
 type ScaleInfo = { id: number; centroid: Point; startScale: number; startDist: number }
@@ -54,12 +64,14 @@ export class SceneEngine {
   private tool: Tool = 'brush'
   private color = BRUSH_COLORS[0]
   private brushSize = 16
-  private doodles: Doodle[] = []
+  private marks: Mark[] = []
   private selectedId: number | null = null
+  private selectedStickerId: string = DEFAULT_STICKER_ID
   private nextId = 1
 
-  private history: Doodle[][] = []
-  private drawing: Doodle | null = null
+  private history: Mark[][] = []
+  private future: Mark[][] = []
+  private drawing: StrokeMark | null = null
   private dragInfo: DragInfo | null = null
   private scaleInfo: ScaleInfo | null = null
   private hoverPos: Point | null = null
@@ -85,6 +97,11 @@ export class SceneEngine {
     this.maskCtx = maskCtx
 
     this.paragraphs = prepareParagraphs(sourceText, this.font)
+
+    STICKERS.forEach((s) => {
+      const img = loadStickerImage(s.id)
+      if (img) img.onload = () => this.markDirty()
+    })
 
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('pointermove', this.onPointerMove)
@@ -113,13 +130,15 @@ export class SceneEngine {
 
   getSnapshot = (): SceneSnapshot => {
     const selected =
-      this.selectedId !== null ? this.doodles.find((d) => d.id === this.selectedId) ?? null : null
+      this.selectedId !== null ? this.marks.find((m) => m.id === this.selectedId) ?? null : null
     return {
       tool: this.tool,
       color: this.color,
       brushSize: this.brushSize,
       canUndo: this.history.length > 0,
+      canRedo: this.future.length > 0,
       selectedScale: this.tool === 'select' && selected ? selected.scale : null,
+      stickerId: this.selectedStickerId,
     }
   }
 
@@ -147,25 +166,40 @@ export class SceneEngine {
 
   setSelectedScale(scale: number): void {
     if (this.selectedId === null) return
-    const d = this.doodles.find((x) => x.id === this.selectedId)
-    if (!d) return
-    d.scale = scale
+    const mark = this.marks.find((x) => x.id === this.selectedId)
+    if (!mark) return
+    mark.scale = scale
     this.markDirty()
+    this.notify()
+  }
+
+  setStickerId(id: string): void {
+    this.selectedStickerId = id
     this.notify()
   }
 
   undo(): void {
     if (this.history.length === 0) return
-    this.doodles = this.history.pop() as Doodle[]
+    this.future.push(structuredClone(this.marks))
+    this.marks = this.history.pop() as Mark[]
+    this.selectedId = null
+    this.markDirty()
+    this.notify()
+  }
+
+  redo(): void {
+    if (this.future.length === 0) return
+    this.history.push(structuredClone(this.marks))
+    this.marks = this.future.pop() as Mark[]
     this.selectedId = null
     this.markDirty()
     this.notify()
   }
 
   clear(): void {
-    if (this.doodles.length === 0) return
+    if (this.marks.length === 0) return
     this.pushHistory()
-    this.doodles = []
+    this.marks = []
     this.selectedId = null
     this.markDirty()
     this.notify()
@@ -184,7 +218,12 @@ export class SceneEngine {
     })
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     this.maskCtx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
-    this.markDirty()
+    // Resizing the canvas backing store clears it immediately; recompute and
+    // repaint synchronously here (instead of only via markDirty()'s rAF) so
+    // the browser never gets a chance to composite a blank in-between frame.
+    this.computeLayout()
+    this.layoutDirty = false
+    this.render()
   }
 
   // ---------- render loop ----------
@@ -209,7 +248,7 @@ export class SceneEngine {
   }
 
   private computeLayout(): void {
-    paintMask(this.maskCtx, this.width, this.height, this.doodles)
+    paintMask(this.maskCtx, this.width, this.height, this.marks)
     resetParagraphs(this.paragraphs)
     const slots = computeSlots(
       this.maskCtx,
@@ -240,9 +279,9 @@ export class SceneEngine {
     ctx.restore()
   }
 
-  private drawSelection(d: Doodle): void {
+  private drawSelection(mark: Mark): void {
     const ctx = this.ctx
-    const b = bboxFor(d)
+    const b = bboxFor(mark)
     ctx.save()
     ctx.strokeStyle = 'rgba(255,255,255,0.85)'
     ctx.setLineDash([4, 4])
@@ -252,6 +291,25 @@ export class SceneEngine {
     ctx.fillStyle = '#fff'
     ctx.fillRect(b.maxX - 5, b.maxY - 5, 10, 10)
     ctx.restore()
+  }
+
+  private drawStrokeMark(mark: StrokeMark): void {
+    const ctx = this.ctx
+    const pts = transformedPoints(mark)
+    const paint = mark.color === RAINBOW ? rainbowGradient(ctx, bboxFor(mark)) : mark.color
+    ctx.save()
+    ctx.globalAlpha = 0.92
+    ctx.fillStyle = paint
+    ctx.strokeStyle = paint
+    drawStrokePath(ctx, pts, mark.width * mark.scale)
+    ctx.restore()
+  }
+
+  private drawStickerMark(mark: StickerMark): void {
+    const img = loadStickerImage(mark.stickerId)
+    if (!img || !img.complete || img.naturalWidth === 0) return
+    const r = stickerRect(mark)
+    this.ctx.drawImage(img, r.minX, r.minY, r.maxX - r.minX, r.maxY - r.minY)
   }
 
   private render(): void {
@@ -264,41 +322,33 @@ export class SceneEngine {
     ctx.textBaseline = 'alphabetic'
     for (const t of this.textDrawList) ctx.fillText(t.text, t.x, t.y)
 
-    this.doodles.forEach((d) => {
-      const pts = transformedPoints(d)
-      ctx.save()
-      ctx.globalAlpha = 0.92
-      ctx.fillStyle = d.color
-      ctx.strokeStyle = d.color
-      drawStrokePath(ctx, pts, d.width * d.scale)
-      ctx.restore()
-      if (d.id === this.selectedId && this.tool === 'select') this.drawSelection(d)
+    this.marks.forEach((mark) => {
+      if (mark.kind === 'stroke') this.drawStrokeMark(mark)
+      else this.drawStickerMark(mark)
+      if (mark.id === this.selectedId && this.tool === 'select') this.drawSelection(mark)
     })
 
     const hover = this.hoverPos
     if (this.tool === 'brush' && hover) {
+      const r = this.brushSize / 2
+      const ringBbox: Bbox = { minX: hover.x - r, minY: hover.y - r, maxX: hover.x + r, maxY: hover.y + r }
+      const ringPaint = this.color === RAINBOW ? rainbowGradient(ctx, ringBbox) : this.color
       ctx.save()
-      ctx.strokeStyle = this.color
+      ctx.strokeStyle = ringPaint
       ctx.globalAlpha = 0.55
       ctx.lineWidth = 1.4
       ctx.beginPath()
-      ctx.arc(hover.x, hover.y, this.brushSize / 2, 0, Math.PI * 2)
+      ctx.arc(hover.x, hover.y, r, 0, Math.PI * 2)
       ctx.stroke()
       ctx.restore()
-      ctx.font = `11px ${MONO_FONT_STACK}`
-      ctx.fillStyle = 'rgba(201,205,211,0.5)'
-      ctx.fillText(
-        `${Math.round(hover.x)}, ${Math.round(hover.y)}  ⌀${this.brushSize}`,
-        hover.x + this.brushSize / 2 + 10,
-        hover.y + 4,
-      )
     }
   }
 
   // ---------- history ----------
   private pushHistory(): void {
-    this.history.push(structuredClone(this.doodles))
+    this.history.push(structuredClone(this.marks))
     if (this.history.length > 50) this.history.shift()
+    this.future = []
   }
 
   // ---------- pointer handling ----------
@@ -309,9 +359,11 @@ export class SceneEngine {
 
   private onPointerDown = (e: PointerEvent): void => {
     const p = this.localPos(e)
+
     if (this.tool === 'brush') {
       this.pushHistory()
-      const doodle: Doodle = {
+      const mark: StrokeMark = {
+        kind: 'stroke',
         id: this.nextId++,
         basePoints: [p],
         centroid: { x: p.x, y: p.y },
@@ -321,28 +373,54 @@ export class SceneEngine {
         color: this.color,
         width: this.brushSize,
       }
-      this.drawing = doodle
-      this.doodles.push(doodle)
-      this.selectedId = doodle.id
+      this.drawing = mark
+      this.marks.push(mark)
+      this.selectedId = mark.id
       this.canvas.setPointerCapture(e.pointerId)
       this.notify()
       return
     }
 
+    if (this.tool === 'sticker') {
+      const img = loadStickerImage(this.selectedStickerId)
+      if (!img || !img.complete || img.naturalWidth === 0) return
+      this.pushHistory()
+      const ratio = img.naturalWidth / img.naturalHeight
+      const baseWidth = ratio >= 1 ? STICKER_MAX_DIM : STICKER_MAX_DIM * ratio
+      const baseHeight = ratio >= 1 ? STICKER_MAX_DIM / ratio : STICKER_MAX_DIM
+      const mark: StickerMark = {
+        kind: 'sticker',
+        id: this.nextId++,
+        centroid: { x: p.x, y: p.y },
+        dx: 0,
+        dy: 0,
+        scale: 1,
+        stickerId: this.selectedStickerId,
+        baseWidth,
+        baseHeight,
+      }
+      this.marks.push(mark)
+      this.selectedId = mark.id
+      this.tool = 'select'
+      this.markDirty()
+      this.notify()
+      return
+    }
+
     if (this.tool === 'select') {
-      const hit = hitTest(this.doodles, this.selectedId, p)
+      const hit = hitTest(this.marks, this.selectedId, p)
       if (hit && hit.handle) {
         this.pushHistory()
         this.scaleInfo = {
-          id: hit.doodle.id,
-          centroid: computeCentroid(hit.doodle),
-          startScale: hit.doodle.scale,
-          startDist: Math.max(6, dist(p, computeCentroid(hit.doodle))),
+          id: hit.mark.id,
+          centroid: computeCentroid(hit.mark),
+          startScale: hit.mark.scale,
+          startDist: Math.max(6, dist(p, computeCentroid(hit.mark))),
         }
       } else if (hit) {
         this.pushHistory()
-        this.selectedId = hit.doodle.id
-        this.dragInfo = { id: hit.doodle.id, startX: p.x, startY: p.y, dx0: hit.doodle.dx, dy0: hit.doodle.dy }
+        this.selectedId = hit.mark.id
+        this.dragInfo = { id: hit.mark.id, startX: p.x, startY: p.y, dx0: hit.mark.dx, dy0: hit.mark.dy }
         this.canvas.setPointerCapture(e.pointerId)
       } else {
         this.selectedId = null
@@ -364,10 +442,10 @@ export class SceneEngine {
 
     if (this.dragInfo) {
       const drag = this.dragInfo
-      const d = this.doodles.find((x) => x.id === drag.id)
-      if (d) {
-        d.dx = drag.dx0 + (p.x - drag.startX)
-        d.dy = drag.dy0 + (p.y - drag.startY)
+      const mark = this.marks.find((x) => x.id === drag.id)
+      if (mark) {
+        mark.dx = drag.dx0 + (p.x - drag.startX)
+        mark.dy = drag.dy0 + (p.y - drag.startY)
       }
       this.markDirty()
       return
@@ -375,10 +453,10 @@ export class SceneEngine {
 
     if (this.scaleInfo) {
       const scaleInfo = this.scaleInfo
-      const d = this.doodles.find((x) => x.id === scaleInfo.id)
-      if (d) {
+      const mark = this.marks.find((x) => x.id === scaleInfo.id)
+      if (mark) {
         const ratio = dist(p, scaleInfo.centroid) / scaleInfo.startDist
-        d.scale = Math.min(4, Math.max(0.3, scaleInfo.startScale * ratio))
+        mark.scale = Math.min(4, Math.max(0.3, scaleInfo.startScale * ratio))
       }
       this.markDirty()
       this.notify()

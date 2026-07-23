@@ -21,7 +21,8 @@ export default function App() {
       if (e.key === 'v' || e.key === 'V') engine!.setTool('select')
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault()
-        engine!.undo()
+        if (e.shiftKey) engine!.redo()
+        else engine!.undo()
       }
     }
 

@@ -1,4 +1,5 @@
-import { BRUSH_COLORS, type SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
+import { BRUSH_COLORS, RAINBOW, type SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
+import { STICKERS } from '../lib/stickers'
 import { cx } from '../lib/cx'
 
 type ToolbarProps = {
@@ -44,6 +45,20 @@ export default function Toolbar({ engine, snapshot, onHelp }: ToolbarProps) {
         </svg>
       </button>
 
+      <button
+        type="button"
+        title="Sticker"
+        aria-label="Sticker tool"
+        className={cx(toolButtonBase, snapshot.tool === 'sticker' && toolButtonActive)}
+        onClick={() => engine?.setTool('sticker')}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
+          <rect x={3} y={4} width={18} height={16} rx={2} />
+          <circle cx={8.5} cy={9.5} r={1.5} />
+          <path d="M21 15l-5-5-4 4-3-3-6 6" />
+        </svg>
+      </button>
+
       <div className="my-1.5 h-px w-[30px] bg-line" />
 
       <button
@@ -57,6 +72,20 @@ export default function Toolbar({ engine, snapshot, onHelp }: ToolbarProps) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
           <path d="M4 9h11a5 5 0 0 1 0 10H9" />
           <path d="M8 5 4 9l4 4" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        title="Redo (⌘⇧Z)"
+        aria-label="Redo"
+        disabled={!snapshot.canRedo}
+        className={toolButtonBase}
+        onClick={() => engine?.redo()}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
+          <path d="M20 9H9a5 5 0 0 0 0 10h6" />
+          <path d="M16 5l4 4-4 4" />
         </svg>
       </button>
 
@@ -92,6 +121,16 @@ export default function Toolbar({ engine, snapshot, onHelp }: ToolbarProps) {
                   )}
                 />
               ))}
+              <button
+                type="button"
+                title="Rainbow"
+                aria-label="Set brush color rainbow"
+                onClick={() => engine?.setColor(RAINBOW)}
+                className={cx(
+                  'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 bg-gradient-to-br from-red-500 via-yellow-300 to-fuchsia-500 p-0',
+                  snapshot.color === RAINBOW && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
+                )}
+              />
             </div>
             <div className="text-[9px] uppercase tracking-[0.08em] text-fog/50">size</div>
             <input
@@ -103,6 +142,26 @@ export default function Toolbar({ engine, snapshot, onHelp }: ToolbarProps) {
               className="w-[52px] cursor-pointer"
             />
           </>
+        )}
+
+        {snapshot.tool === 'sticker' && (
+          <div className="flex flex-col gap-[7px]">
+            {STICKERS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                title={s.label}
+                aria-label={`Use sticker ${s.label}`}
+                onClick={() => engine?.setStickerId(s.id)}
+                className={cx(
+                  'h-7 w-7 cursor-pointer overflow-hidden rounded-md border-2 border-white/15 p-0',
+                  s.id === snapshot.stickerId && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
+                )}
+              >
+                <img src={s.url} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
         )}
 
         {snapshot.tool === 'select' && snapshot.selectedScale !== null && (

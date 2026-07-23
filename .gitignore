@@ -71,4 +71,5 @@ package-lock.json
 *.temp
 
 # While developing
+TODO.md
 specs.md

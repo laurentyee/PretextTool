@@ -4,7 +4,7 @@ import {
   type PreparedTextWithSegments,
   type LayoutCursor,
 } from '@chenglou/pretext'
-import { drawStrokePath, transformedPoints, type Doodle } from './doodleGeometry'
+import { drawStrokePath, stickerRect, transformedPoints, type Mark } from './doodleGeometry'
 
 const PADDING = 26
 const GUTTER = 40
@@ -35,18 +35,30 @@ export function resetParagraphs(paragraphs: ParagraphState[]): void {
   })
 }
 
+const MARK_CLEARANCE = 10
+
 export function paintMask(
   maskCtx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  doodles: Doodle[],
+  marks: Mark[],
 ): void {
   maskCtx.clearRect(0, 0, width, height)
   maskCtx.fillStyle = '#fff'
   maskCtx.strokeStyle = '#fff'
-  doodles.forEach((d) => {
-    const pts = transformedPoints(d)
-    drawStrokePath(maskCtx, pts, d.width * d.scale + 10)
+  marks.forEach((mark) => {
+    if (mark.kind === 'stroke') {
+      const pts = transformedPoints(mark)
+      drawStrokePath(maskCtx, pts, mark.width * mark.scale + MARK_CLEARANCE)
+      return
+    }
+    const r = stickerRect(mark)
+    maskCtx.fillRect(
+      r.minX - MARK_CLEARANCE,
+      r.minY - MARK_CLEARANCE,
+      r.maxX - r.minX + MARK_CLEARANCE * 2,
+      r.maxY - r.minY + MARK_CLEARANCE * 2,
+    )
   })
 }
 

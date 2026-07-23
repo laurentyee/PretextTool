@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { BRUSH_COLORS, SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
+import { DEFAULT_STICKER_ID } from '../lib/stickers'
 
 const DEFAULT_SNAPSHOT: SceneSnapshot = {
   tool: 'brush',
   color: BRUSH_COLORS[0],
   brushSize: 16,
   canUndo: false,
+  canRedo: false,
   selectedScale: null,
+  stickerId: DEFAULT_STICKER_ID,
 }
 
 export function useSceneEngine(
