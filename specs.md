@@ -5,7 +5,6 @@ pretext.js
 React + TypeScript
 Tailwind CSS
 HTML + Canvas 2D
-+ suggested libraries in User Rules if needed. 
 
 # Description
 
@@ -22,7 +21,7 @@ Initial source text is provided in the document "source-text.md" in this repo. T
 Later this is something to consider and make a decision on: Clip overflow text, intentionally provided more text than was necessary to account for different screen sizes and re-rendering.
 
 ## Design style
-Focus should be on demoing how text is dynamically resized and recalculated using pretext.js. UI of toolbar to be minimalistic. Fonts: use a mix of monospaced font and PP Editorial (provided in repo). Clean, modern looking, start with dark mode. 
+Focus should be on demoing how text is dynamically resized and recalculated using pretext.js. UI of toolbar to be minimalistic. Fonts: use a mix of monospaced font and PP Editorial New (provided in repo). Clean, modern looking, start with dark mode. 
 
 Brushes to be of a contrasting bright colour.
 
@@ -82,4 +81,4 @@ Tiered in order of importance. This is the current planned sequence of implement
 
 # Where to start
 
-Start by first creating project with proper folder structure. Next, provide initial code to implement the simplest working version of Tier 1 for this idea.
+Start by first creating project with proper folder and file structure. 
