@@ -23,8 +23,10 @@ import {
   type TextDraw,
 } from './textFlow'
 import { DEFAULT_STICKER_ID, loadStickerImage, STICKERS } from './stickers'
+import { DEFAULT_THEME_ID, getThemeDef } from './themes'
 
 export type Tool = 'brush' | 'select' | 'sticker'
+export type FontFamily = 'mono' | 'serif' | 'sans'
 
 export type SceneSnapshot = {
   tool: Tool
@@ -34,6 +36,7 @@ export type SceneSnapshot = {
   canRedo: boolean
   selectedScale: number | null
   stickerId: string
+  fontFamily: FontFamily
 }
 
 export const BRUSH_COLORS = ['#D4FF3D', '#FF5C7A', '#4CC9FF', '#FFD23D']
@@ -42,8 +45,19 @@ export const RAINBOW = 'rainbow' as const
 const FONT_SIZE = 14
 const LINE_HEIGHT = 26
 export const MONO_FONT_STACK = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
-const TEXT_COLOR = 'rgba(201,205,211,0.92)'
 const STICKER_MAX_DIM = 170
+
+export const FONT_STACKS: Record<FontFamily, string> = {
+  mono: MONO_FONT_STACK,
+  serif: '"PP Editorial New", Georgia, serif',
+  sans: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+}
+
+export const FONT_FAMILY_OPTIONS: { id: FontFamily; label: string }[] = [
+  { id: 'mono', label: 'Mono' },
+  { id: 'serif', label: 'Serif' },
+  { id: 'sans', label: 'Sans' },
+]
 
 type DragInfo = { id: number; startX: number; startY: number; dx0: number; dy0: number }
 type ScaleInfo = { id: number; centroid: Point; startScale: number; startDist: number }
@@ -54,8 +68,9 @@ export class SceneEngine {
   private readonly maskCanvas: HTMLCanvasElement
   private readonly maskCtx: CanvasRenderingContext2D
   private readonly stage: HTMLElement
-  private readonly font = `${FONT_SIZE}px ${MONO_FONT_STACK}`
-  private readonly paragraphs: ParagraphState[]
+  private readonly sourceText: string
+  private font: string
+  private paragraphs: ParagraphState[]
 
   private dpr = Math.max(1, window.devicePixelRatio || 1)
   private width = 0
@@ -64,6 +79,8 @@ export class SceneEngine {
   private tool: Tool = 'brush'
   private color = BRUSH_COLORS[0]
   private brushSize = 16
+  private fontFamily: FontFamily = 'mono'
+  private palette = getThemeDef(DEFAULT_THEME_ID).canvas
   private marks: Mark[] = []
   private selectedId: number | null = null
   private selectedStickerId: string = DEFAULT_STICKER_ID
@@ -86,6 +103,7 @@ export class SceneEngine {
   constructor(canvas: HTMLCanvasElement, stage: HTMLElement, sourceText: string) {
     this.canvas = canvas
     this.stage = stage
+    this.sourceText = sourceText
 
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('2D canvas context unavailable')
@@ -96,6 +114,7 @@ export class SceneEngine {
     if (!maskCtx) throw new Error('2D mask context unavailable')
     this.maskCtx = maskCtx
 
+    this.font = `${FONT_SIZE}px ${FONT_STACKS[this.fontFamily]}`
     this.paragraphs = prepareParagraphs(sourceText, this.font)
 
     STICKERS.forEach((s) => {
@@ -139,6 +158,7 @@ export class SceneEngine {
       canRedo: this.future.length > 0,
       selectedScale: this.tool === 'select' && selected ? selected.scale : null,
       stickerId: this.selectedStickerId,
+      fontFamily: this.fontFamily,
     }
   }
 
@@ -175,6 +195,19 @@ export class SceneEngine {
 
   setStickerId(id: string): void {
     this.selectedStickerId = id
+    this.notify()
+  }
+
+  setThemeId(id: string): void {
+    this.palette = getThemeDef(id).canvas
+    this.markDirty()
+  }
+
+  setFontFamily(choice: FontFamily): void {
+    this.fontFamily = choice
+    this.font = `${FONT_SIZE}px ${FONT_STACKS[choice]}`
+    this.paragraphs = prepareParagraphs(this.sourceText, this.font)
+    this.markDirty()
     this.notify()
   }
 
@@ -261,13 +294,13 @@ export class SceneEngine {
       this.font,
       LINE_HEIGHT,
     )
-    this.textDrawList = fillSlotsWithPretext(this.paragraphs, slots)
+    this.textDrawList = fillSlotsWithPretext(this.paragraphs, slots, this.ctx)
   }
 
   private drawGrid(): void {
     const ctx = this.ctx
     ctx.save()
-    ctx.fillStyle = 'rgba(255,255,255,0.035)'
+    ctx.fillStyle = this.palette.grid
     const gap = 30
     for (let x = 0; x < this.width; x += gap) {
       for (let y = 0; y < this.height; y += gap) {
@@ -283,12 +316,12 @@ export class SceneEngine {
     const ctx = this.ctx
     const b = bboxFor(mark)
     ctx.save()
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+    ctx.strokeStyle = this.palette.selectionStroke
     ctx.setLineDash([4, 4])
     ctx.lineWidth = 1
     ctx.strokeRect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY)
     ctx.setLineDash([])
-    ctx.fillStyle = '#fff'
+    ctx.fillStyle = this.palette.selectionHandle
     ctx.fillRect(b.maxX - 5, b.maxY - 5, 10, 10)
     ctx.restore()
   }
@@ -318,7 +351,7 @@ export class SceneEngine {
     this.drawGrid()
 
     ctx.font = this.font
-    ctx.fillStyle = TEXT_COLOR
+    ctx.fillStyle = this.palette.text
     ctx.textBaseline = 'alphabetic'
     for (const t of this.textDrawList) ctx.fillText(t.text, t.x, t.y)
 

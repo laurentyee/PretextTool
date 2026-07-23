@@ -36,6 +36,20 @@
 
 :root {
   color-scheme: dark;
+  /* Dark theme (default) — mirrors THEMES[0] in src/lib/themes.ts */
+  --color-ink: 11 13 16;
+  --color-panel: 20 23 27;
+  --color-line: 42 46 53;
+  --color-fog: 201 205 211;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  /* Light theme — mirrors THEMES[1] in src/lib/themes.ts */
+  --color-ink: 246 243 236;
+  --color-panel: 239 236 226;
+  --color-line: 216 210 194;
+  --color-fog: 51 49 44;
 }
 
 * {
@@ -46,7 +60,7 @@ html, body, #root {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: #0b0d10;
+  background: rgb(var(--color-ink));
 }
 
 body {

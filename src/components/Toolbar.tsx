@@ -1,11 +1,14 @@
-import { BRUSH_COLORS, RAINBOW, type SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
+import { BRUSH_COLORS, FONT_FAMILY_OPTIONS, FONT_STACKS, RAINBOW, type SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
 import { STICKERS } from '../lib/stickers'
+import { THEMES, getThemeDef } from '../lib/themes'
 import { cx } from '../lib/cx'
 
 type ToolbarProps = {
   engine: SceneEngine | null
   snapshot: SceneSnapshot
   onHelp: () => void
+  themeId: string
+  onCycleTheme: () => void
 }
 
 const toolButtonBase =
@@ -13,7 +16,9 @@ const toolButtonBase =
 const toolButtonActive = 'bg-lime/10 border-lime/45 text-lime'
 const iconClass = 'h-[19px] w-[19px]'
 
-export default function Toolbar({ engine, snapshot, onHelp }: ToolbarProps) {
+export default function Toolbar({ engine, snapshot, onHelp, themeId, onCycleTheme }: ToolbarProps) {
+  const currentTheme = getThemeDef(themeId)
+  const nextTheme = THEMES[(THEMES.findIndex((t) => t.id === themeId) + 1) % THEMES.length]
   return (
     <aside className="flex w-[84px] flex-none select-none flex-col items-center gap-2 border-r border-line bg-panel py-[18px]">
       <div className="mb-2.5 font-editorial text-[14px] italic tracking-wide text-fog/75">
@@ -102,6 +107,40 @@ export default function Toolbar({ engine, snapshot, onHelp }: ToolbarProps) {
           <path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" />
         </svg>
       </button>
+
+      <div className="my-1.5 h-px w-[30px] bg-line" />
+
+      <button
+        type="button"
+        title={`Theme: ${currentTheme.label} (click for ${nextTheme.label})`}
+        aria-label="Cycle theme"
+        className={toolButtonBase}
+        onClick={onCycleTheme}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
+          <circle cx={12} cy={12} r={4.5} />
+          <path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8 6 18M18 6l1.8-1.8" />
+        </svg>
+      </button>
+
+      <div className="flex gap-1">
+        {FONT_FAMILY_OPTIONS.map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            title={opt.label}
+            aria-label={`Use ${opt.label} font`}
+            onClick={() => engine?.setFontFamily(opt.id)}
+            style={{ fontFamily: FONT_STACKS[opt.id] }}
+            className={cx(
+              'flex h-6 w-6 items-center justify-center rounded-md border border-transparent text-[11px] text-fog transition-colors duration-100 hover:bg-white/[0.06]',
+              snapshot.fontFamily === opt.id && toolButtonActive,
+            )}
+          >
+            Aa
+          </button>
+        ))}
+      </div>
 
       <div className="mt-0.5 flex min-h-[20px] flex-col items-center gap-2.5">
         {snapshot.tool === 'brush' && (

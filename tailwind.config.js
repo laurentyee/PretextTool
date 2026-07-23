@@ -7,10 +7,10 @@ export default {
         editorial: ['"PP Editorial New"', 'system-ui', 'sans-serif']
       },
       colors: {
-        ink: '#0b0d10',
-        panel: '#14171b',
-        line: '#2a2e35',
-        fog: '#c9cdd3',
+        ink: 'rgb(var(--color-ink) / <alpha-value>)',
+        panel: 'rgb(var(--color-panel) / <alpha-value>)',
+        line: 'rgb(var(--color-line) / <alpha-value>)',
+        fog: 'rgb(var(--color-fog) / <alpha-value>)',
         lime: '#d4ff3d'
       }
     }

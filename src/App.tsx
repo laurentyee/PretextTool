@@ -4,13 +4,43 @@ import Stage from './components/Stage'
 import Toolbar from './components/Toolbar'
 import HelpModal from './components/HelpModal'
 import { useSceneEngine } from './hooks/useSceneEngine'
+import { DEFAULT_THEME_ID, THEMES } from './lib/themes'
+
+const THEME_STORAGE_KEY = 'pretext-tool:theme'
+
+function getInitialThemeId(): string {
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY)
+    if (stored && THEMES.some((t) => t.id === stored)) return stored
+  } catch {
+    // localStorage unavailable (privacy mode, etc.) — fall back below
+  }
+  return DEFAULT_THEME_ID
+}
 
 export default function App() {
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [helpOpen, setHelpOpen] = useState(true)
+  const [themeId, setThemeId] = useState<string>(getInitialThemeId)
 
   const { engine, snapshot } = useSceneEngine(canvasRef, stageRef, sourceText)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeId
+    engine?.setThemeId(themeId)
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, themeId)
+    } catch {
+      // ignore
+    }
+  }, [engine, themeId])
+
+  function cycleTheme() {
+    const currentIndex = THEMES.findIndex((t) => t.id === themeId)
+    const next = THEMES[(currentIndex + 1) % THEMES.length]
+    setThemeId(next.id)
+  }
 
   useEffect(() => {
     if (!engine) return
@@ -32,7 +62,13 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-screen bg-ink text-fog">
-      <Toolbar engine={engine} snapshot={snapshot} onHelp={() => setHelpOpen(true)} />
+      <Toolbar
+        engine={engine}
+        snapshot={snapshot}
+        onHelp={() => setHelpOpen(true)}
+        themeId={themeId}
+        onCycleTheme={cycleTheme}
+      />
       <Stage stageRef={stageRef} canvasRef={canvasRef} />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>

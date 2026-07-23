@@ -10,6 +10,7 @@ const DEFAULT_SNAPSHOT: SceneSnapshot = {
   canRedo: false,
   selectedScale: null,
   stickerId: DEFAULT_STICKER_ID,
+  fontFamily: 'mono',
 }
 
 export function useSceneEngine(
