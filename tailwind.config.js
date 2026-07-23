@@ -7,9 +7,11 @@ export default {
         editorial: ['"PP Editorial New"', 'system-ui', 'sans-serif']
       },
       colors: {
-        canvas: '#0f172a',
-        surface: '#111827',
-        accent: '#38bdf8'
+        ink: '#0b0d10',
+        panel: '#14171b',
+        line: '#2a2e35',
+        fog: '#c9cdd3',
+        lime: '#d4ff3d'
       }
     }
   },

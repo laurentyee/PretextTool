@@ -1,29 +1,64 @@
 # Node modules
 node_modules/
 
+# Backup
+src_backup/
+
 # Vite cache / output
+# (dist/ also matters for secrets: Vite inlines any VITE_-prefixed env vars
+# into the built JS at compile time, so a leaked secret in dist/ is as bad
+# as a leaked .env file)
 dist/
 .vite/
 
 # npm cache used for local installs
 npm-cache/
 
-# Logs
+# Logs (can contain leaked tokens/credentials from stack traces)
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
- pnpm-debug.log*
+pnpm-debug.log*
+*.log
 
 # MacOS
 .DS_Store
 
-# Local env files
+# Local env files (never commit real secrets; keep .env.example tracked)
 .env
 .env.*
+!.env.example
+!.env.*.example
+
+# Credentials, keys & certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+id_rsa*
+id_ed25519*
+*.ppk
+.netrc
+
+# Cloud provider credentials
+.aws/
+.gcp/
+*service-account*.json
+*credentials*.json
+
+# Package manager auth (registry tokens)
+.npmrc
+.yarnrc
+.yarnrc.yml
 
 # Editor directories and files
 .vscode/
 .idea/
+
+# Claude Code local settings (machine-specific, not for sharing)
+.claude/settings.local.json
 
 # TypeScript
 *.tsbuildinfo
@@ -34,3 +69,6 @@ package-lock.json
 # Temporary files
 *.tmp
 *.temp
+
+# While developing
+specs.md

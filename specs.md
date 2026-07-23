@@ -78,7 +78,3 @@ Tiered in order of importance. This is the current planned sequence of implement
 2. Select any word within the text. That creates a bounding box around the text which can scale the text up and down. Surrounding text will reshape dynamically. This is to demo how pretext.js fits text to container (https://pretextjs.dev/fit-text-to-container) Idea is similar to lasso redraw but would create different visual effects.
 
 3. Change brush texture: More experimental brush types such as brush using perlin noise texture.
-
-# Where to start
-
-Start by first creating project with proper folder and file structure. 
