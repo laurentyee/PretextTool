@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import { BRUSH_COLORS, SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
-import { DEFAULT_STICKER_ID } from '../lib/stickers'
+import { SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
+import { BRUSH_COLORS } from '../lib/tools/brush'
+import { DEFAULT_STICKER_ID } from '../lib/tools/stickers'
 
 const DEFAULT_SNAPSHOT: SceneSnapshot = {
   tool: 'brush',

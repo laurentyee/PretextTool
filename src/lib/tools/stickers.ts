@@ -1,6 +1,6 @@
-import animalWorldUrl from '../../assets/paintings/derived/animal-world.jpg'
-import huangYaoUrl from '../../assets/paintings/derived/huang-yao.jpg'
-import monetUrl from '../../assets/paintings/derived/monet.jpg'
+import animalWorldUrl from '../../../assets/paintings/derived/animal-world.jpg'
+import huangYaoUrl from '../../../assets/paintings/derived/huang-yao.jpg'
+import monetUrl from '../../../assets/paintings/derived/monet.jpg'
 
 export type StickerDef = { id: string; label: string; url: string }
 

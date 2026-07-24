@@ -1,5 +1,7 @@
-import { BRUSH_COLORS, FONT_FAMILY_OPTIONS, FONT_STACKS, RAINBOW, type SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
-import { STICKERS } from '../lib/stickers'
+import { type SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
+import { FONT_FAMILY_OPTIONS, FONT_STACKS } from '../lib/fonts'
+import { BRUSH_COLORS, RAINBOW } from '../lib/tools/brush'
+import { STICKERS } from '../lib/tools/stickers'
 import { THEMES, getThemeDef } from '../lib/themes'
 import { cx } from '../lib/cx'
 
@@ -21,7 +23,7 @@ export default function Toolbar({ engine, snapshot, onHelp, themeId, onCycleThem
   const nextTheme = THEMES[(THEMES.findIndex((t) => t.id === themeId) + 1) % THEMES.length]
   return (
     <aside className="flex w-[84px] flex-none select-none flex-col items-center gap-2 border-r border-line bg-panel py-[18px]">
-      <div className="mb-2.5 font-editorial text-[14px] italic tracking-wide text-fog/75">
+      <div className="mb-2.5 font-serif text-[14px] italic tracking-wide text-fog/75">
         sb<span className="not-italic text-lime/90">/</span>pt
       </div>
 
@@ -61,6 +63,23 @@ export default function Toolbar({ engine, snapshot, onHelp, themeId, onCycleThem
           <rect x={3} y={4} width={18} height={16} rx={2} />
           <circle cx={8.5} cy={9.5} r={1.5} />
           <path d="M21 15l-5-5-4 4-3-3-6 6" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        title="Scatter"
+        aria-label="Scatter brush tool"
+        className={cx(toolButtonBase, snapshot.tool === 'scatter' && toolButtonActive)}
+        onClick={() => engine?.setTool('scatter')}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
+          <path d="M11 4v5" />
+          <path d="M17 3v3" />
+          <path d="M5 8v4" />
+          <path d="M14 12v6" />
+          <path d="M8 14v4" />
+          <path d="M18 15v3" />
         </svg>
       </button>
 
@@ -144,33 +163,36 @@ export default function Toolbar({ engine, snapshot, onHelp, themeId, onCycleThem
 
       <div className="mt-0.5 flex min-h-[20px] flex-col items-center gap-2.5">
         {snapshot.tool === 'brush' && (
-          <>
-            <div className="flex flex-col gap-[7px]">
-              {BRUSH_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  title={c}
-                  aria-label={`Set brush color ${c}`}
-                  onClick={() => engine?.setColor(c)}
-                  style={{ background: c }}
-                  className={cx(
-                    'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
-                    c === snapshot.color && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
-                  )}
-                />
-              ))}
+          <div className="flex flex-col gap-[7px]">
+            {BRUSH_COLORS.map((c) => (
               <button
+                key={c}
                 type="button"
-                title="Rainbow"
-                aria-label="Set brush color rainbow"
-                onClick={() => engine?.setColor(RAINBOW)}
+                title={c}
+                aria-label={`Set brush color ${c}`}
+                onClick={() => engine?.setColor(c)}
+                style={{ background: c }}
                 className={cx(
-                  'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 bg-gradient-to-br from-red-500 via-yellow-300 to-fuchsia-500 p-0',
-                  snapshot.color === RAINBOW && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
+                  'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
+                  c === snapshot.color && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
                 )}
               />
-            </div>
+            ))}
+            <button
+              type="button"
+              title="Rainbow"
+              aria-label="Set brush color rainbow"
+              onClick={() => engine?.setColor(RAINBOW)}
+              className={cx(
+                'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 bg-gradient-to-br from-red-500 via-yellow-300 to-fuchsia-500 p-0',
+                snapshot.color === RAINBOW && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
+              )}
+            />
+          </div>
+        )}
+
+        {(snapshot.tool === 'brush' || snapshot.tool === 'scatter') && (
+          <>
             <div className="text-[9px] uppercase tracking-[0.08em] text-fog/50">size</div>
             <input
               type="range"

@@ -73,3 +73,5 @@ package-lock.json
 # While developing
 TODO.md
 specs.md
+
+*.code-workspace

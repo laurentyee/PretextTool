@@ -23,11 +23,21 @@ export type StickerMark = MarkBase & {
   baseHeight: number
 }
 
-export type Mark = StrokeMark | StickerMark
+/** A single scattered bar, positioned in the mark's local (base) coordinate space. */
+export type ScatterBar = { x: number; y: number; w: number; h: number; color: string }
+
+export type ScatterMark = MarkBase & {
+  kind: 'scatter'
+  basePoints: Point[]
+  width: number
+  coreColor: string
+  strokeColor: string
+  bars: ScatterBar[]
+}
+
+export type Mark = StrokeMark | StickerMark | ScatterMark
 
 export type Bbox = { minX: number; minY: number; maxX: number; maxY: number }
-
-export type HitResult = { mark: Mark; handle: boolean }
 
 export function dist(a: Point, b: Point): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
@@ -37,11 +47,27 @@ export function computeCentroid(mark: Mark): Point {
   return { x: mark.centroid.x + mark.dx, y: mark.centroid.y + mark.dy }
 }
 
-export function transformedPoints(mark: StrokeMark): Point[] {
+type PathMark = { basePoints: Point[] } & MarkBase
+
+export function transformedPoints(mark: PathMark): Point[] {
   return mark.basePoints.map((p) => ({
     x: mark.centroid.x + mark.dx + (p.x - mark.centroid.x) * mark.scale,
     y: mark.centroid.y + mark.dy + (p.y - mark.centroid.y) * mark.scale,
   }))
+}
+
+/** Transforms a scatter mark's bars into screen-space rects, honoring dx/dy/scale. */
+export function transformedBars(mark: ScatterMark): { rect: Bbox; color: string }[] {
+  return mark.bars.map((bar) => {
+    const cx = mark.centroid.x + mark.dx + (bar.x - mark.centroid.x) * mark.scale
+    const cy = mark.centroid.y + mark.dy + (bar.y - mark.centroid.y) * mark.scale
+    const halfW = (bar.w * mark.scale) / 2
+    const halfH = (bar.h * mark.scale) / 2
+    return {
+      rect: { minX: cx - halfW, minY: cy - halfH, maxX: cx + halfW, maxY: cy + halfH },
+      color: bar.color,
+    }
+  })
 }
 
 export function drawStrokePath(
@@ -65,8 +91,7 @@ export function drawStrokePath(
   g.stroke()
 }
 
-function strokeBbox(mark: StrokeMark): Bbox {
-  const pts = transformedPoints(mark)
+function pointsBbox(pts: Point[], pad: number): Bbox {
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity
@@ -80,8 +105,26 @@ function strokeBbox(mark: StrokeMark): Bbox {
   if (!isFinite(minX)) {
     minX = minY = maxX = maxY = 0
   }
-  const pad = (mark.width * mark.scale) / 2 + 8
   return { minX: minX - pad, minY: minY - pad, maxX: maxX + pad, maxY: maxY + pad }
+}
+
+function strokeBbox(mark: StrokeMark): Bbox {
+  return pointsBbox(transformedPoints(mark), (mark.width * mark.scale) / 2 + 8)
+}
+
+function unionBbox(a: Bbox, b: Bbox): Bbox {
+  return {
+    minX: Math.min(a.minX, b.minX),
+    minY: Math.min(a.minY, b.minY),
+    maxX: Math.max(a.maxX, b.maxX),
+    maxY: Math.max(a.maxY, b.maxY),
+  }
+}
+
+function scatterBbox(mark: ScatterMark): Bbox {
+  let bbox = pointsBbox(transformedPoints(mark), (mark.width * mark.scale) / 2 + 8)
+  for (const bar of transformedBars(mark)) bbox = unionBbox(bbox, bar.rect)
+  return bbox
 }
 
 /** The sticker's true image rect, with no selection-handle padding. */
@@ -94,27 +137,10 @@ export function stickerRect(mark: StickerMark): Bbox {
 
 export function bboxFor(mark: Mark): Bbox {
   if (mark.kind === 'stroke') return strokeBbox(mark)
+  if (mark.kind === 'scatter') return scatterBbox(mark)
   const r = stickerRect(mark)
   const pad = 8
   return { minX: r.minX - pad, minY: r.minY - pad, maxX: r.maxX + pad, maxY: r.maxY + pad }
-}
-
-export function hitTest(marks: Mark[], selectedId: number | null, p: Point): HitResult | null {
-  if (selectedId !== null) {
-    const sel = marks.find((x) => x.id === selectedId)
-    if (sel) {
-      const b = bboxFor(sel)
-      if (dist(p, { x: b.maxX, y: b.maxY }) <= 12) return { mark: sel, handle: true }
-    }
-  }
-  for (let i = marks.length - 1; i >= 0; i--) {
-    const mark = marks[i]
-    const b = bboxFor(mark)
-    if (p.x >= b.minX && p.x <= b.maxX && p.y >= b.minY && p.y <= b.maxY) {
-      return { mark, handle: false }
-    }
-  }
-  return null
 }
 
 const RAINBOW_STOPS: [number, string][] = [
@@ -132,4 +158,25 @@ export function rainbowGradient(ctx: CanvasRenderingContext2D, bbox: Bbox): Canv
   const g = ctx.createLinearGradient(bbox.minX, bbox.minY, bbox.maxX, bbox.maxY)
   for (const [offset, color] of RAINBOW_STOPS) g.addColorStop(offset, color)
   return g
+}
+
+export function randRange(min: number, max: number): number {
+  return min + Math.random() * (max - min)
+}
+
+/**
+ * A random offset vector for scattering marks around a point. Most samples land
+ * within `radius`, but a fraction get "flung" out to several times that distance,
+ * giving the scatter a dynamic, uneven spread instead of a uniform disc.
+ */
+export function scatterOffset(radius: number): Point {
+  const angle = Math.random() * Math.PI * 2
+  const flung = Math.random() < 0.2
+  const distance = flung ? radius * randRange(1, 4) : radius * Math.random()
+  return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance }
+}
+
+/** Weighted random pick from a flat list of candidate colors (repeats bias the weighting). */
+export function pickScatterColor(palette: string[]): string {
+  return palette[Math.floor(Math.random() * palette.length)]
 }

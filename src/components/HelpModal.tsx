@@ -14,7 +14,7 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
       )}
     >
       <div className="w-full max-w-[440px] rounded-[18px] border border-line bg-panel p-9 text-fog">
-        <h2 className="m-0 mb-0.5 font-editorial text-[34px] font-semibold text-white">Scrapbook</h2>
+        <h2 className="m-0 mb-0.5 font-serif text-[34px] font-semibold text-white">Scrapbook</h2>
         <p className="m-0 mb-[22px] text-[11px] uppercase tracking-[0.1em] text-lime">a live demo of pretext.js</p>
         <ol className="m-0 mb-[26px] list-decimal space-y-2 pl-[18px] text-[13.5px] leading-[1.7] text-fog">
           <li>

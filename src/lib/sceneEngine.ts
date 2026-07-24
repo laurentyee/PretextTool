@@ -1,18 +1,4 @@
-import {
-  bboxFor,
-  computeCentroid,
-  dist,
-  drawStrokePath,
-  hitTest,
-  rainbowGradient,
-  stickerRect,
-  transformedPoints,
-  type Bbox,
-  type Mark,
-  type Point,
-  type StickerMark,
-  type StrokeMark,
-} from './doodleGeometry'
+import { type Mark, type Point, type ScatterMark, type StrokeMark } from './doodleGeometry'
 import {
   computeSlots,
   fillSlotsWithPretext,
@@ -22,11 +8,16 @@ import {
   type ParagraphState,
   type TextDraw,
 } from './textFlow'
-import { DEFAULT_STICKER_ID, loadStickerImage, STICKERS } from './stickers'
+import { BRUSH_COLORS, createBrushMark, drawBrushHoverRing, drawBrushMark } from './tools/brush'
+import { createScatterMark, drawScatterMark, spawnScatterBars } from './tools/scatter'
+import { applyDrag, applyScale, beginDrag, beginScale, drawSelection, hitTest, type DragInfo, type ScaleInfo } from './tools/select'
+import { createStickerMark, drawStickerMark } from './tools/sticker'
+import { DEFAULT_STICKER_ID, loadStickerImage, STICKERS } from './tools/stickers'
+import { FONT_STACKS, type FontFamily } from './fonts'
 import { DEFAULT_THEME_ID, getThemeDef } from './themes'
 
-export type Tool = 'brush' | 'select' | 'sticker'
-export type FontFamily = 'mono' | 'serif' | 'sans'
+export type Tool = 'brush' | 'select' | 'sticker' | 'scatter'
+export type { FontFamily }
 
 export type SceneSnapshot = {
   tool: Tool
@@ -39,28 +30,8 @@ export type SceneSnapshot = {
   fontFamily: FontFamily
 }
 
-export const BRUSH_COLORS = ['#D4FF3D', '#FF5C7A', '#4CC9FF', '#FFD23D']
-export const RAINBOW = 'rainbow' as const
-
 const FONT_SIZE = 14
 const LINE_HEIGHT = 26
-export const MONO_FONT_STACK = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
-const STICKER_MAX_DIM = 170
-
-export const FONT_STACKS: Record<FontFamily, string> = {
-  mono: MONO_FONT_STACK,
-  serif: '"PP Editorial New", Georgia, serif',
-  sans: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-}
-
-export const FONT_FAMILY_OPTIONS: { id: FontFamily; label: string }[] = [
-  { id: 'mono', label: 'Mono' },
-  { id: 'serif', label: 'Serif' },
-  { id: 'sans', label: 'Sans' },
-]
-
-type DragInfo = { id: number; startX: number; startY: number; dx0: number; dy0: number }
-type ScaleInfo = { id: number; centroid: Point; startScale: number; startDist: number }
 
 export class SceneEngine {
   private readonly canvas: HTMLCanvasElement
@@ -88,7 +59,7 @@ export class SceneEngine {
 
   private history: Mark[][] = []
   private future: Mark[][] = []
-  private drawing: StrokeMark | null = null
+  private drawing: StrokeMark | ScatterMark | null = null
   private dragInfo: DragInfo | null = null
   private scaleInfo: ScaleInfo | null = null
   private hoverPos: Point | null = null
@@ -312,39 +283,6 @@ export class SceneEngine {
     ctx.restore()
   }
 
-  private drawSelection(mark: Mark): void {
-    const ctx = this.ctx
-    const b = bboxFor(mark)
-    ctx.save()
-    ctx.strokeStyle = this.palette.selectionStroke
-    ctx.setLineDash([4, 4])
-    ctx.lineWidth = 1
-    ctx.strokeRect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY)
-    ctx.setLineDash([])
-    ctx.fillStyle = this.palette.selectionHandle
-    ctx.fillRect(b.maxX - 5, b.maxY - 5, 10, 10)
-    ctx.restore()
-  }
-
-  private drawStrokeMark(mark: StrokeMark): void {
-    const ctx = this.ctx
-    const pts = transformedPoints(mark)
-    const paint = mark.color === RAINBOW ? rainbowGradient(ctx, bboxFor(mark)) : mark.color
-    ctx.save()
-    ctx.globalAlpha = 0.92
-    ctx.fillStyle = paint
-    ctx.strokeStyle = paint
-    drawStrokePath(ctx, pts, mark.width * mark.scale)
-    ctx.restore()
-  }
-
-  private drawStickerMark(mark: StickerMark): void {
-    const img = loadStickerImage(mark.stickerId)
-    if (!img || !img.complete || img.naturalWidth === 0) return
-    const r = stickerRect(mark)
-    this.ctx.drawImage(img, r.minX, r.minY, r.maxX - r.minX, r.maxY - r.minY)
-  }
-
   private render(): void {
     const ctx = this.ctx
     ctx.clearRect(0, 0, this.width, this.height)
@@ -356,24 +294,14 @@ export class SceneEngine {
     for (const t of this.textDrawList) ctx.fillText(t.text, t.x, t.y)
 
     this.marks.forEach((mark) => {
-      if (mark.kind === 'stroke') this.drawStrokeMark(mark)
-      else this.drawStickerMark(mark)
-      if (mark.id === this.selectedId && this.tool === 'select') this.drawSelection(mark)
+      if (mark.kind === 'stroke') drawBrushMark(ctx, mark)
+      else if (mark.kind === 'scatter') drawScatterMark(ctx, mark)
+      else drawStickerMark(ctx, mark)
+      if (mark.id === this.selectedId && this.tool === 'select') drawSelection(ctx, mark, this.palette)
     })
 
-    const hover = this.hoverPos
-    if (this.tool === 'brush' && hover) {
-      const r = this.brushSize / 2
-      const ringBbox: Bbox = { minX: hover.x - r, minY: hover.y - r, maxX: hover.x + r, maxY: hover.y + r }
-      const ringPaint = this.color === RAINBOW ? rainbowGradient(ctx, ringBbox) : this.color
-      ctx.save()
-      ctx.strokeStyle = ringPaint
-      ctx.globalAlpha = 0.55
-      ctx.lineWidth = 1.4
-      ctx.beginPath()
-      ctx.arc(hover.x, hover.y, r, 0, Math.PI * 2)
-      ctx.stroke()
-      ctx.restore()
+    if (this.tool === 'brush' && this.hoverPos) {
+      drawBrushHoverRing(ctx, this.hoverPos, this.brushSize, this.color)
     }
   }
 
@@ -395,17 +323,18 @@ export class SceneEngine {
 
     if (this.tool === 'brush') {
       this.pushHistory()
-      const mark: StrokeMark = {
-        kind: 'stroke',
-        id: this.nextId++,
-        basePoints: [p],
-        centroid: { x: p.x, y: p.y },
-        dx: 0,
-        dy: 0,
-        scale: 1,
-        color: this.color,
-        width: this.brushSize,
-      }
+      const mark = createBrushMark(this.nextId++, p, this.color, this.brushSize)
+      this.drawing = mark
+      this.marks.push(mark)
+      this.selectedId = mark.id
+      this.canvas.setPointerCapture(e.pointerId)
+      this.notify()
+      return
+    }
+
+    if (this.tool === 'scatter') {
+      this.pushHistory()
+      const mark = createScatterMark(this.nextId++, p, this.brushSize)
       this.drawing = mark
       this.marks.push(mark)
       this.selectedId = mark.id
@@ -415,23 +344,10 @@ export class SceneEngine {
     }
 
     if (this.tool === 'sticker') {
-      const img = loadStickerImage(this.selectedStickerId)
-      if (!img || !img.complete || img.naturalWidth === 0) return
+      const mark = createStickerMark(this.nextId, p, this.selectedStickerId)
+      if (!mark) return
+      this.nextId++
       this.pushHistory()
-      const ratio = img.naturalWidth / img.naturalHeight
-      const baseWidth = ratio >= 1 ? STICKER_MAX_DIM : STICKER_MAX_DIM * ratio
-      const baseHeight = ratio >= 1 ? STICKER_MAX_DIM / ratio : STICKER_MAX_DIM
-      const mark: StickerMark = {
-        kind: 'sticker',
-        id: this.nextId++,
-        centroid: { x: p.x, y: p.y },
-        dx: 0,
-        dy: 0,
-        scale: 1,
-        stickerId: this.selectedStickerId,
-        baseWidth,
-        baseHeight,
-      }
       this.marks.push(mark)
       this.selectedId = mark.id
       this.tool = 'select'
@@ -444,16 +360,11 @@ export class SceneEngine {
       const hit = hitTest(this.marks, this.selectedId, p)
       if (hit && hit.handle) {
         this.pushHistory()
-        this.scaleInfo = {
-          id: hit.mark.id,
-          centroid: computeCentroid(hit.mark),
-          startScale: hit.mark.scale,
-          startDist: Math.max(6, dist(p, computeCentroid(hit.mark))),
-        }
+        this.scaleInfo = beginScale(hit.mark, p)
       } else if (hit) {
         this.pushHistory()
         this.selectedId = hit.mark.id
-        this.dragInfo = { id: hit.mark.id, startX: p.x, startY: p.y, dx0: hit.mark.dx, dy0: hit.mark.dy }
+        this.dragInfo = beginDrag(hit.mark, p)
         this.canvas.setPointerCapture(e.pointerId)
       } else {
         this.selectedId = null
@@ -468,7 +379,9 @@ export class SceneEngine {
     this.hoverPos = this.tool === 'brush' ? p : null
 
     if (this.drawing) {
+      const prev = this.drawing.basePoints[this.drawing.basePoints.length - 1]
       this.drawing.basePoints.push(p)
+      if (this.drawing.kind === 'scatter') spawnScatterBars(this.drawing, prev, p, this.brushSize)
       this.markDirty()
       return
     }
@@ -476,10 +389,7 @@ export class SceneEngine {
     if (this.dragInfo) {
       const drag = this.dragInfo
       const mark = this.marks.find((x) => x.id === drag.id)
-      if (mark) {
-        mark.dx = drag.dx0 + (p.x - drag.startX)
-        mark.dy = drag.dy0 + (p.y - drag.startY)
-      }
+      if (mark) applyDrag(mark, drag, p)
       this.markDirty()
       return
     }
@@ -487,10 +397,7 @@ export class SceneEngine {
     if (this.scaleInfo) {
       const scaleInfo = this.scaleInfo
       const mark = this.marks.find((x) => x.id === scaleInfo.id)
-      if (mark) {
-        const ratio = dist(p, scaleInfo.centroid) / scaleInfo.startDist
-        mark.scale = Math.min(4, Math.max(0.3, scaleInfo.startScale * ratio))
-      }
+      if (mark) applyScale(mark, scaleInfo, p)
       this.markDirty()
       this.notify()
       return

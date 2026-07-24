@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
+
 @font-face {
   font-family: 'PP Editorial New';
   src: url('../assets/PPEditorialNew/PPEditorialNew-Regular.otf') format('opentype');
@@ -50,6 +52,21 @@
   --color-panel: 239 236 226;
   --color-line: 216 210 194;
   --color-fog: 51 49 44;
+}
+
+:root {
+  /* Brush tool palette — read by src/lib/tools/brush.ts, theme-independent. */
+  --color-brush-1: #d4ff3d;
+  --color-brush-2: #ff5c7a;
+  --color-brush-3: #4cc9ff;
+  --color-brush-4: #ffd23d;
+
+  /* Scatter tool palette — read by src/lib/tools/scatter.ts, theme-independent. */
+  --color-scatter-core: #e8752c;
+  --color-scatter-stroke: #6b4ee6;
+  --color-scatter-accent-1: #6b4ee6;
+  --color-scatter-accent-2: #8a8a8a;
+  --color-scatter-accent-3: #1c1c1c;
 }
 
 * {
