@@ -11,10 +11,9 @@ import {
 import { BRUSH_COLORS, createBrushMark, drawBrushHoverRing, drawBrushMark } from './tools/brush'
 import { createScatterMark, drawScatterMark, spawnScatterBars } from './tools/scatter'
 import { applyDrag, applyScale, beginDrag, beginScale, drawSelection, hitTest, type DragInfo, type ScaleInfo } from './tools/select'
-import { createStickerMark, drawStickerMark } from './tools/sticker'
-import { DEFAULT_STICKER_ID, loadStickerImage, STICKERS } from './tools/stickers'
+import { createStickerMark, drawStickerMark, DEFAULT_STICKER_ID, loadStickerImage, STICKERS } from './tools/sticker'
 import { fontStack, type FontFamily } from './tools/fontSwap'
-import { readCssVar } from './readStyle'
+import { readCssVar } from './utils/readStyle'
 
 export type Tool = 'brush' | 'select' | 'sticker' | 'scatter'
 export type { FontFamily }

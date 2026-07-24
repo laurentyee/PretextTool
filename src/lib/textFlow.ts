@@ -4,7 +4,9 @@ import {
   type PreparedTextWithSegments,
   type LayoutCursor,
 } from '@chenglou/pretext'
-import { bboxFor, drawStrokePath, stickerRect, transformedPoints, type Mark } from './doodleGeometry'
+import { drawStrokePath, transformedPoints, type Mark } from './doodleGeometry'
+import { bboxForScatter } from './tools/scatter'
+import { stickerRect } from './tools/sticker'
 
 const PADDING = 26
 const GUTTER = 40
@@ -53,7 +55,7 @@ export function paintMask(
       return
     }
     if (mark.kind === 'scatter') {
-      const b = bboxFor(mark)
+      const b = bboxForScatter(mark)
       maskCtx.fillRect(
         b.minX - MARK_CLEARANCE,
         b.minY - MARK_CLEARANCE,

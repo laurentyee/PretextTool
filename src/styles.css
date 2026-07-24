@@ -84,6 +84,15 @@
   --color-scatter-accent-1: #6b4ee6;
   --color-scatter-accent-2: #8a8a8a;
   --color-scatter-accent-3: #1c1c1c;
+
+  /* Rainbow brush gradient stops — read by src/lib/tools/brush.ts, theme-independent. */
+  --color-rainbow-1: hsl(0, 90%, 60%);
+  --color-rainbow-2: hsl(40, 95%, 58%);
+  --color-rainbow-3: hsl(90, 85%, 55%);
+  --color-rainbow-4: hsl(160, 80%, 50%);
+  --color-rainbow-5: hsl(210, 90%, 60%);
+  --color-rainbow-6: hsl(260, 85%, 65%);
+  --color-rainbow-7: hsl(310, 90%, 62%);
 }
 
 * {

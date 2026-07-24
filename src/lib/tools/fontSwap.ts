@@ -1,4 +1,4 @@
-import { readCssVar } from '../readStyle'
+import { readCssVar } from '../utils/readStyle'
 
 export type FontFamily = 'mono' | 'serif' | 'sans'
 

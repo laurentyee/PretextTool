@@ -1,12 +1,11 @@
-import { readCssVar } from '../readStyle'
+import { readCssVar } from '../utils/readStyle'
 import {
   dist,
   drawStrokePath,
-  pickScatterColor,
-  randRange,
-  scatterOffset,
-  transformedBars,
+  pointsBbox,
   transformedPoints,
+  unionBbox,
+  type Bbox,
   type Point,
   type ScatterMark,
 } from '../doodleGeometry'
@@ -21,6 +20,47 @@ export const SCATTER_ACCENT_COLORS = [
 
 // Weighted so most scattered bars pick up the core orange, with purple/gray/black accents mixed in.
 const SCATTER_BAR_PALETTE = [SCATTER_CORE_COLOR, SCATTER_CORE_COLOR, SCATTER_CORE_COLOR, ...SCATTER_ACCENT_COLORS]
+
+function randRange(min: number, max: number): number {
+  return min + Math.random() * (max - min)
+}
+
+/**
+ * A random offset vector for scattering marks around a point. Most samples land
+ * within `radius`, but a fraction get "flung" out to several times that distance,
+ * giving the scatter a dynamic, uneven spread instead of a uniform disc.
+ */
+function scatterOffset(radius: number): Point {
+  const angle = Math.random() * Math.PI * 2
+  const flung = Math.random() < 0.2
+  const distance = flung ? radius * randRange(1, 4) : radius * Math.random()
+  return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance }
+}
+
+/** Weighted random pick from a flat list of candidate colors (repeats bias the weighting). */
+function pickScatterColor(palette: string[]): string {
+  return palette[Math.floor(Math.random() * palette.length)]
+}
+
+/** Transforms a scatter mark's bars into screen-space rects, honoring dx/dy/scale. */
+function transformedBars(mark: ScatterMark): { rect: Bbox; color: string }[] {
+  return mark.bars.map((bar) => {
+    const cx = mark.centroid.x + mark.dx + (bar.x - mark.centroid.x) * mark.scale
+    const cy = mark.centroid.y + mark.dy + (bar.y - mark.centroid.y) * mark.scale
+    const halfW = (bar.w * mark.scale) / 2
+    const halfH = (bar.h * mark.scale) / 2
+    return {
+      rect: { minX: cx - halfW, minY: cy - halfH, maxX: cx + halfW, maxY: cy + halfH },
+      color: bar.color,
+    }
+  })
+}
+
+export function bboxForScatter(mark: ScatterMark): Bbox {
+  let bbox = pointsBbox(transformedPoints(mark), (mark.width * mark.scale) / 2 + 8)
+  for (const bar of transformedBars(mark)) bbox = unionBbox(bbox, bar.rect)
+  return bbox
+}
 
 export function createScatterMark(id: number, p: Point, width: number): ScatterMark {
   return {

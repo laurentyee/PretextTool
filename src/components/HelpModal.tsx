@@ -1,4 +1,4 @@
-import { cx } from '../lib/cx'
+import { cx } from '../lib/utils/cx'
 
 type HelpModalProps = {
   open: boolean

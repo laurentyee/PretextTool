@@ -1,9 +1,9 @@
 import { type SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
 import { FONT_FAMILY_OPTIONS, fontStack } from '../lib/tools/fontSwap'
 import { BRUSH_COLORS, RAINBOW } from '../lib/tools/brush'
-import { STICKERS } from '../lib/tools/stickers'
+import { STICKERS } from '../lib/tools/sticker'
 import { THEMES } from '../lib/themes'
-import { cx } from '../lib/cx'
+import { cx } from '../lib/utils/cx'
 
 type ToolbarProps = {
   engine: SceneEngine | null
