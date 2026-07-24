@@ -1,11 +1,14 @@
 export default {
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  content: {
+    relative: true,
+    files: ['../index.html', '../src/**/*.{ts,tsx}']
+  },
   theme: {
     extend: {
       fontFamily: {
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-        sans: ['ui-sans-serif', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'Arial', 'sans-serif'],
-        serif: ['"PP Editorial New"', 'Georgia', 'serif']
+        mono: 'var(--font-mono)',
+        sans: 'var(--font-sans)',
+        serif: 'var(--font-serif)'
       },
       colors: {
         ink: 'rgb(var(--color-ink) / <alpha-value>)',

@@ -38,23 +38,40 @@
 
 :root {
   color-scheme: dark;
-  /* Dark theme (default) — mirrors THEMES[0] in src/lib/themes.ts */
+  /* Dark theme (default) */
   --color-ink: 11 13 16;
   --color-panel: 20 23 27;
   --color-line: 42 46 53;
   --color-fog: 201 205 211;
+
+  /* Canvas-only palette (read via readCssVar in sceneEngine.ts — canvas can't consume CSS classes) */
+  --canvas-text: rgba(201, 205, 211, 0.92);
+  --canvas-grid: rgba(255, 255, 255, 0.035);
+  --canvas-selection-stroke: rgba(255, 255, 255, 0.85);
+  --canvas-selection-handle: #ffffff;
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  /* Light theme — mirrors THEMES[1] in src/lib/themes.ts */
+  /* Light theme */
   --color-ink: 246 243 236;
   --color-panel: 239 236 226;
   --color-line: 216 210 194;
   --color-fog: 51 49 44;
+
+  --canvas-text: rgba(51, 49, 44, 0.92);
+  --canvas-grid: rgba(0, 0, 0, 0.045);
+  --canvas-selection-stroke: rgba(20, 20, 20, 0.85);
+  --canvas-selection-handle: #141414;
 }
 
 :root {
+  /* Font stacks — single source of truth for tailwind.config.js's fontFamily tokens
+     and for canvas ctx.font (read via readCssVar in src/lib/tools/fontSwap.ts). */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-serif: "PP Editorial New", Georgia, serif;
+
   /* Brush tool palette — read by src/lib/tools/brush.ts, theme-independent. */
   --color-brush-1: #d4ff3d;
   --color-brush-2: #ff5c7a;
@@ -81,7 +98,7 @@ html, body, #root {
 }
 
 body {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   -webkit-font-smoothing: antialiased;
 }
 

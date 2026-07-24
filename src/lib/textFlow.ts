@@ -147,10 +147,6 @@ export function computeSlots(
   return slots
 }
 
-// Large sentinel width for a "does more text follow?" peek — pretext's line
-// breaking never needs a real width anywhere close to this.
-const PEEK_WIDTH = 1_000_000
-
 export function fillSlotsWithPretext(
   paragraphs: ParagraphState[],
   slots: Slot[],
@@ -170,22 +166,14 @@ export function fillSlotsWithPretext(
     }
     state.cursor = line.end
 
-    // A paragraph's last line conventionally stays ragged, not stretched to
-    // fill the column — peek ahead (unbounded width) to see if anything's left.
-    const isParagraphEnd = layoutNextLine(state.prepared, line.end, PEEK_WIDTH) === null
-
     const words = line.text.split(' ').filter(Boolean)
-    const shouldJustify = words.length > 1 && !isParagraphEnd
-
     const spaceWidth = measureCtx.measureText(' ').width
     const wordWidths = words.map((w) => measureCtx.measureText(w).width)
-    const naturalWidth = wordWidths.reduce((a, b) => a + b, 0) + spaceWidth * (words.length - 1)
-    const extraPerGap = shouldJustify ? Math.max(0, (slot.width - naturalWidth) / (words.length - 1)) : 0
 
     let x = slot.x
     words.forEach((word, i) => {
       draws.push({ text: word, x, y: slot.y })
-      x += wordWidths[i] + spaceWidth + extraPerGap
+      x += wordWidths[i] + spaceWidth
     })
   }
   return draws

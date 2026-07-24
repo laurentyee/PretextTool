@@ -28,7 +28,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeId
-    engine?.setThemeId(themeId)
+    engine?.setThemeId()
     try {
       localStorage.setItem(THEME_STORAGE_KEY, themeId)
     } catch {

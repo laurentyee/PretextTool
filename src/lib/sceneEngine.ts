@@ -13,8 +13,8 @@ import { createScatterMark, drawScatterMark, spawnScatterBars } from './tools/sc
 import { applyDrag, applyScale, beginDrag, beginScale, drawSelection, hitTest, type DragInfo, type ScaleInfo } from './tools/select'
 import { createStickerMark, drawStickerMark } from './tools/sticker'
 import { DEFAULT_STICKER_ID, loadStickerImage, STICKERS } from './tools/stickers'
-import { FONT_STACKS, type FontFamily } from './fonts'
-import { DEFAULT_THEME_ID, getThemeDef } from './themes'
+import { fontStack, type FontFamily } from './tools/fontSwap'
+import { readCssVar } from './readStyle'
 
 export type Tool = 'brush' | 'select' | 'sticker' | 'scatter'
 export type { FontFamily }
@@ -51,7 +51,7 @@ export class SceneEngine {
   private color = BRUSH_COLORS[0]
   private brushSize = 16
   private fontFamily: FontFamily = 'mono'
-  private palette = getThemeDef(DEFAULT_THEME_ID).canvas
+  private palette = this.readCanvasPalette()
   private marks: Mark[] = []
   private selectedId: number | null = null
   private selectedStickerId: string = DEFAULT_STICKER_ID
@@ -85,7 +85,7 @@ export class SceneEngine {
     if (!maskCtx) throw new Error('2D mask context unavailable')
     this.maskCtx = maskCtx
 
-    this.font = `${FONT_SIZE}px ${FONT_STACKS[this.fontFamily]}`
+    this.font = `${FONT_SIZE}px ${fontStack(this.fontFamily)}`
     this.paragraphs = prepareParagraphs(sourceText, this.font)
 
     STICKERS.forEach((s) => {
@@ -169,14 +169,16 @@ export class SceneEngine {
     this.notify()
   }
 
-  setThemeId(id: string): void {
-    this.palette = getThemeDef(id).canvas
+  setThemeId(): void {
+    // Caller (App.tsx) has already flipped document.documentElement's [data-theme]
+    // attribute before calling this, so the CSS cascade is already applied — just re-read it.
+    this.palette = this.readCanvasPalette()
     this.markDirty()
   }
 
   setFontFamily(choice: FontFamily): void {
     this.fontFamily = choice
-    this.font = `${FONT_SIZE}px ${FONT_STACKS[choice]}`
+    this.font = `${FONT_SIZE}px ${fontStack(choice)}`
     this.paragraphs = prepareParagraphs(this.sourceText, this.font)
     this.markDirty()
     this.notify()
@@ -266,6 +268,15 @@ export class SceneEngine {
       LINE_HEIGHT,
     )
     this.textDrawList = fillSlotsWithPretext(this.paragraphs, slots, this.ctx)
+  }
+
+  private readCanvasPalette(): { text: string; grid: string; selectionStroke: string; selectionHandle: string } {
+    return {
+      text: readCssVar('--canvas-text'),
+      grid: readCssVar('--canvas-grid'),
+      selectionStroke: readCssVar('--canvas-selection-stroke'),
+      selectionHandle: readCssVar('--canvas-selection-handle'),
+    }
   }
 
   private drawGrid(): void {

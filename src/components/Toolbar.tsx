@@ -1,8 +1,8 @@
 import { type SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
-import { FONT_FAMILY_OPTIONS, FONT_STACKS } from '../lib/fonts'
+import { FONT_FAMILY_OPTIONS, fontStack } from '../lib/tools/fontSwap'
 import { BRUSH_COLORS, RAINBOW } from '../lib/tools/brush'
 import { STICKERS } from '../lib/tools/stickers'
-import { THEMES, getThemeDef } from '../lib/themes'
+import { THEMES } from '../lib/themes'
 import { cx } from '../lib/cx'
 
 type ToolbarProps = {
@@ -19,7 +19,7 @@ const toolButtonActive = 'bg-lime/10 border-lime/45 text-lime'
 const iconClass = 'h-[19px] w-[19px]'
 
 export default function Toolbar({ engine, snapshot, onHelp, themeId, onCycleTheme }: ToolbarProps) {
-  const currentTheme = getThemeDef(themeId)
+  const currentTheme = THEMES.find((t) => t.id === themeId) ?? THEMES[0]
   const nextTheme = THEMES[(THEMES.findIndex((t) => t.id === themeId) + 1) % THEMES.length]
   return (
     <aside className="flex w-[84px] flex-none select-none flex-col items-center gap-2 border-r border-line bg-panel py-[18px]">
@@ -150,7 +150,7 @@ export default function Toolbar({ engine, snapshot, onHelp, themeId, onCycleThem
             title={opt.label}
             aria-label={`Use ${opt.label} font`}
             onClick={() => engine?.setFontFamily(opt.id)}
-            style={{ fontFamily: FONT_STACKS[opt.id] }}
+            style={{ fontFamily: fontStack(opt.id) }}
             className={cx(
               'flex h-6 w-6 items-center justify-center rounded-md border border-transparent text-[11px] text-fog transition-colors duration-100 hover:bg-white/[0.06]',
               snapshot.fontFamily === opt.id && toolButtonActive,
