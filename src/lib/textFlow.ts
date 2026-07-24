@@ -5,7 +5,6 @@ import {
   type LayoutCursor,
 } from '@chenglou/pretext'
 import { drawStrokePath, transformedPoints, type Mark } from './doodleGeometry'
-import { bboxForScatter } from './tools/scatter'
 import { stickerRect } from './tools/sticker'
 
 const PADDING = 26
@@ -52,16 +51,6 @@ export function paintMask(
     if (mark.kind === 'stroke') {
       const pts = transformedPoints(mark)
       drawStrokePath(maskCtx, pts, mark.width * mark.scale + MARK_CLEARANCE)
-      return
-    }
-    if (mark.kind === 'scatter') {
-      const b = bboxForScatter(mark)
-      maskCtx.fillRect(
-        b.minX - MARK_CLEARANCE,
-        b.minY - MARK_CLEARANCE,
-        b.maxX - b.minX + MARK_CLEARANCE * 2,
-        b.maxY - b.minY + MARK_CLEARANCE * 2,
-      )
       return
     }
     const r = stickerRect(mark)

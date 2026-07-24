@@ -1,5 +1,4 @@
 import { bboxForStroke } from './tools/brush'
-import { bboxForScatter } from './tools/scatter'
 import { bboxForSticker } from './tools/sticker'
 
 export type Point = { x: number; y: number }
@@ -27,19 +26,7 @@ export type StickerMark = MarkBase & {
   baseHeight: number
 }
 
-/** A single scattered bar, positioned in the mark's local (base) coordinate space. */
-export type ScatterBar = { x: number; y: number; w: number; h: number; color: string }
-
-export type ScatterMark = MarkBase & {
-  kind: 'scatter'
-  basePoints: Point[]
-  width: number
-  coreColor: string
-  strokeColor: string
-  bars: ScatterBar[]
-}
-
-export type Mark = StrokeMark | StickerMark | ScatterMark
+export type Mark = StrokeMark | StickerMark
 
 export type Bbox = { minX: number; minY: number; maxX: number; maxY: number }
 
@@ -98,18 +85,8 @@ export function pointsBbox(pts: Point[], pad: number): Bbox {
   return { minX: minX - pad, minY: minY - pad, maxX: maxX + pad, maxY: maxY + pad }
 }
 
-export function unionBbox(a: Bbox, b: Bbox): Bbox {
-  return {
-    minX: Math.min(a.minX, b.minX),
-    minY: Math.min(a.minY, b.minY),
-    maxX: Math.max(a.maxX, b.maxX),
-    maxY: Math.max(a.maxY, b.maxY),
-  }
-}
-
 /** Dispatches to each tool's own bbox function — the tools own their mark-shape logic. */
 export function bboxFor(mark: Mark): Bbox {
   if (mark.kind === 'stroke') return bboxForStroke(mark)
-  if (mark.kind === 'scatter') return bboxForScatter(mark)
   return bboxForSticker(mark)
 }

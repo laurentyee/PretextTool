@@ -1,4 +1,4 @@
-import { type Mark, type Point, type ScatterMark, type StrokeMark } from './doodleGeometry'
+import { type Mark, type Point, type StrokeMark } from './doodleGeometry'
 import {
   computeSlots,
   fillSlotsWithPretext,
@@ -8,14 +8,13 @@ import {
   type ParagraphState,
   type TextDraw,
 } from './textFlow'
-import { BRUSH_COLORS, createBrushMark, drawBrushHoverRing, drawBrushMark } from './tools/brush'
-import { createScatterMark, drawScatterMark, spawnScatterBars } from './tools/scatter'
+import { DEFAULT_GRADIENT_ID, createBrushMark, drawBrushHoverRing, drawBrushMark } from './tools/brush'
 import { applyDrag, applyScale, beginDrag, beginScale, drawSelection, hitTest, type DragInfo, type ScaleInfo } from './tools/select'
 import { createStickerMark, drawStickerMark, DEFAULT_STICKER_ID, loadStickerImage, STICKERS } from './tools/sticker'
 import { fontStack, type FontFamily } from './tools/fontSwap'
 import { readCssVar } from './utils/readStyle'
 
-export type Tool = 'brush' | 'select' | 'sticker' | 'scatter'
+export type Tool = 'brush' | 'select' | 'sticker'
 export type { FontFamily }
 
 export type SceneSnapshot = {
@@ -47,7 +46,7 @@ export class SceneEngine {
   private height = 0
 
   private tool: Tool = 'brush'
-  private color = BRUSH_COLORS[0]
+  private color = DEFAULT_GRADIENT_ID
   private brushSize = 16
   private fontFamily: FontFamily = 'mono'
   private palette = this.readCanvasPalette()
@@ -58,7 +57,7 @@ export class SceneEngine {
 
   private history: Mark[][] = []
   private future: Mark[][] = []
-  private drawing: StrokeMark | ScatterMark | null = null
+  private drawing: StrokeMark | null = null
   private dragInfo: DragInfo | null = null
   private scaleInfo: ScaleInfo | null = null
   private hoverPos: Point | null = null
@@ -305,7 +304,6 @@ export class SceneEngine {
 
     this.marks.forEach((mark) => {
       if (mark.kind === 'stroke') drawBrushMark(ctx, mark)
-      else if (mark.kind === 'scatter') drawScatterMark(ctx, mark)
       else drawStickerMark(ctx, mark)
       if (mark.id === this.selectedId && this.tool === 'select') drawSelection(ctx, mark, this.palette)
     })
@@ -334,17 +332,6 @@ export class SceneEngine {
     if (this.tool === 'brush') {
       this.pushHistory()
       const mark = createBrushMark(this.nextId++, p, this.color, this.brushSize)
-      this.drawing = mark
-      this.marks.push(mark)
-      this.selectedId = mark.id
-      this.canvas.setPointerCapture(e.pointerId)
-      this.notify()
-      return
-    }
-
-    if (this.tool === 'scatter') {
-      this.pushHistory()
-      const mark = createScatterMark(this.nextId++, p, this.brushSize)
       this.drawing = mark
       this.marks.push(mark)
       this.selectedId = mark.id
@@ -389,9 +376,7 @@ export class SceneEngine {
     this.hoverPos = this.tool === 'brush' ? p : null
 
     if (this.drawing) {
-      const prev = this.drawing.basePoints[this.drawing.basePoints.length - 1]
       this.drawing.basePoints.push(p)
-      if (this.drawing.kind === 'scatter') spawnScatterBars(this.drawing, prev, p, this.brushSize)
       this.markDirty()
       return
     }

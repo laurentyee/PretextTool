@@ -1,34 +1,48 @@
 import { readCssVar } from '../utils/readStyle'
 import { drawStrokePath, pointsBbox, transformedPoints, type Bbox, type Point, type StrokeMark } from '../doodleGeometry'
 
-export const BRUSH_COLORS = ['--color-brush-1', '--color-brush-2', '--color-brush-3', '--color-brush-4'].map(
-  readCssVar,
-)
-export const RAINBOW = 'rainbow' as const
+const BRUSH_BLUR = readCssVar('--blur-brush')
 
 export function bboxForStroke(mark: StrokeMark): Bbox {
   return pointsBbox(transformedPoints(mark), (mark.width * mark.scale) / 2 + 8)
 }
 
-const RAINBOW_COLORS = [
-  '--color-rainbow-1',
-  '--color-rainbow-2',
-  '--color-rainbow-3',
-  '--color-rainbow-4',
-  '--color-rainbow-5',
-  '--color-rainbow-6',
-  '--color-rainbow-7',
-].map(readCssVar)
+type GradientDef = { id: string; label: string; stops: number }
 
-const RAINBOW_STOPS: [number, string][] = RAINBOW_COLORS.map((color, i) => [
-  i / (RAINBOW_COLORS.length - 1),
-  color,
-])
+const GRADIENT_DEFS: GradientDef[] = [
+  { id: 'rainbow', label: 'Rainbow', stops: 7 },
+  { id: 'warm', label: 'Warm', stops: 5 },
+  { id: 'monet', label: 'Monet', stops: 5 },
+  { id: 'candy', label: 'Candy', stops: 5 },
+  { id: 'citrus', label: 'Citrus', stops: 3 },
+]
 
-/** A bright multi-stop gradient across a mark's bounding box, for the rainbow brush. */
-function rainbowGradient(ctx: CanvasRenderingContext2D, bbox: Bbox): CanvasGradient {
+const cssVarsFor = (def: GradientDef): string[] =>
+  Array.from({ length: def.stops }, (_, i) => `--color-${def.id}-${i + 1}`)
+
+// Canvas gradient stops, resolved once at module load.
+const GRADIENT_STOPS: Record<string, [number, string][]> = Object.fromEntries(
+  GRADIENT_DEFS.map((def) => {
+    const colors = cssVarsFor(def).map(readCssVar)
+    return [def.id, colors.map((color, i) => [i / (colors.length - 1), color])]
+  }),
+)
+
+export const DEFAULT_GRADIENT_ID = GRADIENT_DEFS[0].id
+
+/** CSS `background` value for a DOM swatch preview — same source vars as the canvas gradient, via live var() refs. */
+export function gradientCssPreview(id: string): string {
+  const def = GRADIENT_DEFS.find((d) => d.id === id)
+  if (!def) return ''
+  return `linear-gradient(to right, ${cssVarsFor(def)
+    .map((v) => `var(${v})`)
+    .join(', ')})`
+}
+
+function gradientPaint(ctx: CanvasRenderingContext2D, id: string, bbox: Bbox): CanvasGradient {
   const g = ctx.createLinearGradient(bbox.minX, bbox.minY, bbox.maxX, bbox.maxY)
-  for (const [offset, color] of RAINBOW_STOPS) g.addColorStop(offset, color)
+  const stops = GRADIENT_STOPS[id] ?? GRADIENT_STOPS[DEFAULT_GRADIENT_ID]
+  for (const [offset, color] of stops) g.addColorStop(offset, color)
   return g
 }
 
@@ -48,8 +62,9 @@ export function createBrushMark(id: number, p: Point, color: string, width: numb
 
 export function drawBrushMark(ctx: CanvasRenderingContext2D, mark: StrokeMark): void {
   const pts = transformedPoints(mark)
-  const paint = mark.color === RAINBOW ? rainbowGradient(ctx, bboxForStroke(mark)) : mark.color
+  const paint = gradientPaint(ctx, mark.color, bboxForStroke(mark))
   ctx.save()
+  ctx.filter = `blur(${BRUSH_BLUR})`
   ctx.globalAlpha = 0.92
   ctx.fillStyle = paint
   ctx.strokeStyle = paint
@@ -65,7 +80,7 @@ export function drawBrushHoverRing(
 ): void {
   const r = brushSize / 2
   const ringBbox: Bbox = { minX: hover.x - r, minY: hover.y - r, maxX: hover.x + r, maxY: hover.y + r }
-  const ringPaint = color === RAINBOW ? rainbowGradient(ctx, ringBbox) : color
+  const ringPaint = gradientPaint(ctx, color, ringBbox)
   ctx.save()
   ctx.strokeStyle = ringPaint
   ctx.globalAlpha = 0.55
