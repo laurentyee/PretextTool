@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import sourceText from '../assets/source-text.md?raw'
 import Stage from './components/Stage'
 import Toolbar from './components/Toolbar'
+import Footer from './components/Footer'
 import HelpModal from './components/HelpModal'
 import { useSceneEngine } from './hooks/useSceneEngine'
 import { DEFAULT_THEME_ID, THEMES } from './lib/themes'
@@ -61,15 +62,12 @@ export default function App() {
   }, [engine, helpOpen])
 
   return (
-    <div className="flex h-screen w-screen bg-ink text-fog">
-      <Toolbar
-        engine={engine}
-        snapshot={snapshot}
-        onHelp={() => setHelpOpen(true)}
-        themeId={themeId}
-        onCycleTheme={cycleTheme}
-      />
-      <Stage stageRef={stageRef} canvasRef={canvasRef} />
+    <div className="flex h-screen w-screen flex-col bg-ink text-fog">
+      <div className="flex min-h-0 flex-1">
+        <Toolbar engine={engine} snapshot={snapshot} themeId={themeId} onCycleTheme={cycleTheme} />
+        <Stage stageRef={stageRef} canvasRef={canvasRef} />
+      </div>
+      <Footer onHelp={() => setHelpOpen(true)} />
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   )

@@ -41,8 +41,9 @@
 :root {
   color-scheme: dark;
   /* Dark theme (default) */
-  --color-ink: 11 13 16;
-  --color-panel: 20 23 27;
+  --color-ink: 19 13 5;
+  --color-panel: 39 40 34;
+  --color-icon-box: 59 60 52;
   --color-line: 42 46 53;
   --color-fog: 201 205 211;
 
@@ -58,6 +59,7 @@
   /* Light theme */
   --color-ink: 246 243 236;
   --color-panel: 239 236 226;
+  --color-icon-box: 216 210 194;
   --color-line: 216 210 194;
   --color-fog: 51 49 44;
 
@@ -134,5 +136,5 @@ body {
 }
 
 input[type='range'] {
-  accent-color: #d4ff3d;
+  accent-color: #40A0CD;
 }

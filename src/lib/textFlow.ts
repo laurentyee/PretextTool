@@ -7,7 +7,10 @@ import {
 import { drawStrokePath, transformedPoints, type Mark } from './doodleGeometry'
 import { stickerRect } from './tools/sticker'
 
-const PADDING = 26
+const PADDING_TOP = 26
+const PADDING_RIGHT = 26
+const PADDING_LEFT = 12
+const PADDING_BOTTOM = 8
 const GUTTER = 40
 const MIN_SLOT_CHARS = 3
 
@@ -88,8 +91,8 @@ export function computeSlots(
   lineHeight: number,
 ): Slot[] {
   const imgData = maskCtx.getImageData(0, 0, maskWidth, maskHeight).data
-  const availW = stageWidth - PADDING * 2
-  const availH = stageHeight - PADDING * 2
+  const availW = stageWidth - PADDING_LEFT - PADDING_RIGHT
+  const availH = stageHeight - PADDING_TOP - PADDING_BOTTOM
   const colCount = Math.max(1, Math.min(3, Math.floor(availW / 380)))
   const colWidth = (availW - GUTTER * (colCount - 1)) / colCount
   const rows = Math.max(1, Math.floor(availH / lineHeight))
@@ -100,9 +103,9 @@ export function computeSlots(
 
   const slots: Slot[] = []
   for (let c = 0; c < colCount; c++) {
-    const colX = PADDING + c * (colWidth + GUTTER)
+    const colX = PADDING_LEFT + c * (colWidth + GUTTER)
     for (let r = 0; r < rows; r++) {
-      const rowY = PADDING + r * lineHeight
+      const rowY = PADDING_TOP + r * lineHeight
       const baseline = rowY + lineHeight * 0.72
       const step = 3
       const n = Math.ceil(colWidth / step)

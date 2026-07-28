@@ -1,268 +1,217 @@
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { type SceneEngine, type SceneSnapshot } from '../lib/sceneEngine'
-import { FONT_FAMILY_OPTIONS, fontStack } from '../lib/tools/fontSwap'
-import { gradientCssPreview } from '../lib/tools/brush'
-import { STICKERS } from '../lib/tools/sticker'
+import { FONT_FAMILY_OPTIONS } from '../lib/tools/fontSwap'
 import { THEMES } from '../lib/themes'
 import { cx } from '../lib/utils/cx'
+import ToolFlyout from './ToolFlyout'
+
+import brushIconUrl from '../../assets/icons/Brush.svg'
+import transformIconUrl from '../../assets/icons/Transform.svg'
+import imageIconUrl from '../../assets/icons/Image.svg'
+import undoIconUrl from '../../assets/icons/Undo.svg'
+import redoIconUrl from '../../assets/icons/Redo.svg'
+import trashIconUrl from '../../assets/icons/Trash.svg'
+import themeSwapIconUrl from '../../assets/icons/Theme-Swap.svg'
+import fontSwapIconUrl from '../../assets/icons/Font-Swap.svg'
 
 type ToolbarProps = {
   engine: SceneEngine | null
   snapshot: SceneSnapshot
-  onHelp: () => void
   themeId: string
   onCycleTheme: () => void
 }
 
-const toolButtonBase =
-  'flex h-[42px] w-[42px] items-center justify-center rounded-[11px] border border-transparent text-fog transition-colors duration-100 hover:bg-white/[0.06] disabled:opacity-30 disabled:hover:bg-transparent'
-const toolButtonActive = 'bg-lime/10 border-lime/45 text-lime'
-const iconClass = 'h-[19px] w-[19px]'
+// Cards shrink-wrap: constant padding around the box(es), so a card holding
+// smaller icons is narrower — they line up flush via items-start, not by
+// sharing one fixed width.
+const CARD_PAD = 8
 
-export default function Toolbar({ engine, snapshot, onHelp, themeId, onCycleTheme }: ToolbarProps) {
+type IconButtonProps = {
+  title: string
+  ariaLabel: string
+  iconUrl: string
+  iconSize: number
+  boxSize: number
+  active?: boolean
+  activeStyle?: 'accent' | 'ring'
+  disabled?: boolean
+  onClick: () => void
+  boxRef?: (el: HTMLButtonElement | null) => void
+}
+
+function IconButton({
+  title,
+  ariaLabel,
+  iconUrl,
+  iconSize,
+  boxSize,
+  active,
+  activeStyle = 'ring',
+  disabled,
+  onClick,
+  boxRef,
+}: IconButtonProps) {
+  return (
+    <button
+      ref={boxRef}
+      type="button"
+      title={title}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={onClick}
+      style={{ height: boxSize, width: boxSize }}
+      className={cx(
+        'flex flex-none items-center justify-center rounded-xl border border-transparent transition-colors duration-100 hover:brightness-110 disabled:opacity-30 disabled:hover:brightness-100',
+        !active && 'bg-iconbox',
+        active && activeStyle === 'accent' && 'bg-accent',
+        active && activeStyle === 'ring' && 'bg-iconbox border-lime/60 shadow-[0_0_0_2px_rgba(212,255,61,0.15)]',
+      )}
+    >
+      <img src={iconUrl} alt="" width={iconSize} height={iconSize} className="block" />
+    </button>
+  )
+}
+
+function ToolCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-none flex-col items-center gap-1.5 rounded-xl bg-panel" style={{ padding: CARD_PAD }}>
+      {children}
+    </div>
+  )
+}
+
+export default function Toolbar({ engine, snapshot, themeId, onCycleTheme }: ToolbarProps) {
   const currentTheme = THEMES.find((t) => t.id === themeId) ?? THEMES[0]
   const nextTheme = THEMES[(THEMES.findIndex((t) => t.id === themeId) + 1) % THEMES.length]
+
+  const currentFontIndex = FONT_FAMILY_OPTIONS.findIndex((o) => o.id === snapshot.fontFamily)
+  const currentFont = FONT_FAMILY_OPTIONS[Math.max(currentFontIndex, 0)]
+  const nextFont = FONT_FAMILY_OPTIONS[(Math.max(currentFontIndex, 0) + 1) % FONT_FAMILY_OPTIONS.length]
+
+  const iconRefs = useRef<Partial<Record<'brush' | 'sticker', HTMLButtonElement>>>({})
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
+  const [flyoutClosed, setFlyoutClosed] = useState(false)
+
+  useEffect(() => {
+    setFlyoutClosed(false)
+  }, [snapshot.tool])
+
+  useLayoutEffect(() => {
+    const key = snapshot.tool === 'brush' || snapshot.tool === 'sticker' ? snapshot.tool : null
+    function update() {
+      const el = key ? iconRefs.current[key] : null
+      setAnchorRect(el ? el.getBoundingClientRect() : null)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [snapshot.tool])
+
   return (
-    <aside className="flex w-[84px] flex-none select-none flex-col items-center gap-2 border-r border-line bg-panel py-[18px]">
-      <div className="mb-2.5 font-serif text-[14px] italic tracking-wide text-fog/75">
-        sb<span className="not-italic text-lime/90">/</span>pt
+    <aside className="flex w-[84px] flex-none select-none flex-col items-start bg-ink py-3 pl-2">
+      <div className="flex w-full flex-1 flex-col items-start justify-between gap-1.5">
+        <ToolCard>
+          <IconButton
+            title="Brush (B)"
+            ariaLabel="Brush tool"
+            iconUrl={brushIconUrl}
+            iconSize={36}
+            boxSize={50}
+            active={snapshot.tool === 'brush'}
+            activeStyle="accent"
+            boxRef={(el) => {
+              iconRefs.current.brush = el ?? undefined
+            }}
+            onClick={() => (snapshot.tool === 'brush' ? setFlyoutClosed((c) => !c) : engine?.setTool('brush'))}
+          />
+          <IconButton
+            title="Select / Move (V)"
+            ariaLabel="Select and move tool"
+            iconUrl={transformIconUrl}
+            iconSize={36}
+            boxSize={50}
+            active={snapshot.tool === 'select'}
+            onClick={() => engine?.setTool('select')}
+          />
+          <IconButton
+            title="Sticker"
+            ariaLabel="Sticker tool"
+            iconUrl={imageIconUrl}
+            iconSize={36}
+            boxSize={50}
+            active={snapshot.tool === 'sticker'}
+            activeStyle="accent"
+            boxRef={(el) => {
+              iconRefs.current.sticker = el ?? undefined
+            }}
+            onClick={() => (snapshot.tool === 'sticker' ? setFlyoutClosed((c) => !c) : engine?.setTool('sticker'))}
+          />
+        </ToolCard>
+
+        <ToolCard>
+          <IconButton
+            title="Undo (⌘Z)"
+            ariaLabel="Undo"
+            iconUrl={undoIconUrl}
+            iconSize={24}
+            boxSize={36}
+            disabled={!snapshot.canUndo}
+            onClick={() => engine?.undo()}
+          />
+          <IconButton
+            title="Redo (⌘⇧Z)"
+            ariaLabel="Redo"
+            iconUrl={redoIconUrl}
+            iconSize={24}
+            boxSize={36}
+            disabled={!snapshot.canRedo}
+            onClick={() => engine?.redo()}
+          />
+          <IconButton
+            title="Clear canvas"
+            ariaLabel="Clear canvas"
+            iconUrl={trashIconUrl}
+            iconSize={24}
+            boxSize={36}
+            onClick={() => engine?.clear()}
+          />
+        </ToolCard>
+
+        <ToolCard>
+          <IconButton
+            title={`Theme: ${currentTheme.label} (click for ${nextTheme.label})`}
+            ariaLabel="Cycle theme"
+            iconUrl={themeSwapIconUrl}
+            iconSize={24}
+            boxSize={36}
+            onClick={onCycleTheme}
+          />
+          <IconButton
+            title={`Font: ${currentFont.label} (click for ${nextFont.label})`}
+            ariaLabel="Cycle font family"
+            iconUrl={fontSwapIconUrl}
+            iconSize={24}
+            boxSize={36}
+            onClick={() => engine?.setFontFamily(nextFont.id)}
+          />
+        </ToolCard>
       </div>
 
-      <button
-        type="button"
-        title="Brush (B)"
-        aria-label="Brush tool"
-        className={cx(toolButtonBase, snapshot.tool === 'brush' && toolButtonActive)}
-        onClick={() => engine?.setTool('brush')}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
-          <path d="M9.5 14.5 3 21l1.2-4.8L14.5 5.9a2.1 2.1 0 0 1 3 0l.6.6a2.1 2.1 0 0 1 0 3L8.3 19.3" />
-          <path d="M14.5 5.9 18.1 9.5" />
-        </svg>
-      </button>
+      {snapshot.tool === 'select' && snapshot.selectedScale !== null && (
+        <div className="mt-1.5 flex w-full flex-col items-center gap-2.5">
+          <div className="text-[9px] uppercase tracking-[0.08em] text-fog/50">scale</div>
+          <input
+            type="range"
+            min={30}
+            max={400}
+            value={Math.round(snapshot.selectedScale * 100)}
+            onChange={(e) => engine?.setSelectedScale(Number(e.target.value) / 100)}
+            className="w-[52px] cursor-pointer"
+          />
+        </div>
+      )}
 
-      <button
-        type="button"
-        title="Select / Move (V)"
-        aria-label="Select and move tool"
-        className={cx(toolButtonBase, snapshot.tool === 'select' && toolButtonActive)}
-        onClick={() => engine?.setTool('select')}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
-          <path d="M5 3l14 6-6 2-2 6-6-14z" />
-        </svg>
-      </button>
-
-      <button
-        type="button"
-        title="Sticker"
-        aria-label="Sticker tool"
-        className={cx(toolButtonBase, snapshot.tool === 'sticker' && toolButtonActive)}
-        onClick={() => engine?.setTool('sticker')}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
-          <rect x={3} y={4} width={18} height={16} rx={2} />
-          <circle cx={8.5} cy={9.5} r={1.5} />
-          <path d="M21 15l-5-5-4 4-3-3-6 6" />
-        </svg>
-      </button>
-
-      <div className="my-1.5 h-px w-[30px] bg-line" />
-
-      <button
-        type="button"
-        title="Undo (⌘Z)"
-        aria-label="Undo"
-        disabled={!snapshot.canUndo}
-        className={toolButtonBase}
-        onClick={() => engine?.undo()}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
-          <path d="M4 9h11a5 5 0 0 1 0 10H9" />
-          <path d="M8 5 4 9l4 4" />
-        </svg>
-      </button>
-
-      <button
-        type="button"
-        title="Redo (⌘⇧Z)"
-        aria-label="Redo"
-        disabled={!snapshot.canRedo}
-        className={toolButtonBase}
-        onClick={() => engine?.redo()}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
-          <path d="M20 9H9a5 5 0 0 0 0 10h6" />
-          <path d="M16 5l4 4-4 4" />
-        </svg>
-      </button>
-
-      <button
-        type="button"
-        title="Clear canvas"
-        aria-label="Clear canvas"
-        className={toolButtonBase}
-        onClick={() => engine?.clear()}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
-          <path d="M4 7h16" />
-          <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-          <path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" />
-        </svg>
-      </button>
-
-      <div className="my-1.5 h-px w-[30px] bg-line" />
-
-      <button
-        type="button"
-        title={`Theme: ${currentTheme.label} (click for ${nextTheme.label})`}
-        aria-label="Cycle theme"
-        className={toolButtonBase}
-        onClick={onCycleTheme}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
-          <circle cx={12} cy={12} r={4.5} />
-          <path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8 6 18M18 6l1.8-1.8" />
-        </svg>
-      </button>
-
-      <div className="flex gap-1">
-        {FONT_FAMILY_OPTIONS.map((opt) => (
-          <button
-            key={opt.id}
-            type="button"
-            title={opt.label}
-            aria-label={`Use ${opt.label} font`}
-            onClick={() => engine?.setFontFamily(opt.id)}
-            style={{ fontFamily: fontStack(opt.id) }}
-            className={cx(
-              'flex h-6 w-6 items-center justify-center rounded-md border border-transparent text-[11px] text-fog transition-colors duration-100 hover:bg-white/[0.06]',
-              snapshot.fontFamily === opt.id && toolButtonActive,
-            )}
-          >
-            Aa
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-0.5 flex min-h-[20px] flex-col items-center gap-2.5">
-        {snapshot.tool === 'brush' && (
-          <div className="flex flex-col gap-[7px]">
-            <button
-              type="button"
-              title="Rainbow"
-              aria-label="Set brush gradient rainbow"
-              onClick={() => engine?.setColor('rainbow')}
-              style={{ background: gradientCssPreview('rainbow') }}
-              className={cx(
-                'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
-                snapshot.color === 'rainbow' && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
-              )}
-            />
-            <button
-              type="button"
-              title="Warm"
-              aria-label="Set brush gradient warm"
-              onClick={() => engine?.setColor('warm')}
-              style={{ background: gradientCssPreview('warm') }}
-              className={cx(
-                'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
-                snapshot.color === 'warm' && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
-              )}
-            />
-            <button
-              type="button"
-              title="Monet"
-              aria-label="Set brush gradient monet"
-              onClick={() => engine?.setColor('monet')}
-              style={{ background: gradientCssPreview('monet') }}
-              className={cx(
-                'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
-                snapshot.color === 'monet' && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
-              )}
-            />
-            <button
-              type="button"
-              title="Candy"
-              aria-label="Set brush gradient candy"
-              onClick={() => engine?.setColor('candy')}
-              style={{ background: gradientCssPreview('candy') }}
-              className={cx(
-                'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
-                snapshot.color === 'candy' && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
-              )}
-            />
-            <button
-              type="button"
-              title="Citrus"
-              aria-label="Set brush gradient citrus"
-              onClick={() => engine?.setColor('citrus')}
-              style={{ background: gradientCssPreview('citrus') }}
-              className={cx(
-                'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
-                snapshot.color === 'citrus' && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
-              )}
-            />
-          </div>
-        )}
-
-        {snapshot.tool === 'brush' && (
-          <>
-            <div className="text-[9px] uppercase tracking-[0.08em] text-fog/50">size</div>
-            <input
-              type="range"
-              min={6}
-              max={48}
-              value={snapshot.brushSize}
-              onChange={(e) => engine?.setBrushSize(Number(e.target.value))}
-              className="w-[52px] cursor-pointer"
-            />
-          </>
-        )}
-
-        {snapshot.tool === 'sticker' && (
-          <div className="flex flex-col gap-[7px]">
-            {STICKERS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                title={s.label}
-                aria-label={`Use sticker ${s.label}`}
-                onClick={() => engine?.setStickerId(s.id)}
-                className={cx(
-                  'h-7 w-7 cursor-pointer overflow-hidden rounded-md border-2 border-white/15 p-0',
-                  s.id === snapshot.stickerId && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
-                )}
-              >
-                <img src={s.url} alt="" className="h-full w-full object-cover" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {snapshot.tool === 'select' && snapshot.selectedScale !== null && (
-          <>
-            <div className="text-[9px] uppercase tracking-[0.08em] text-fog/50">scale</div>
-            <input
-              type="range"
-              min={30}
-              max={400}
-              value={Math.round(snapshot.selectedScale * 100)}
-              onChange={(e) => engine?.setSelectedScale(Number(e.target.value) / 100)}
-              className="w-[52px] cursor-pointer"
-            />
-          </>
-        )}
-      </div>
-
-      <div className="flex-1" />
-
-      <button type="button" title="Help" aria-label="Help" className={toolButtonBase} onClick={onHelp}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={iconClass}>
-          <circle cx={12} cy={12} r={9} />
-          <path d="M9.5 9.2a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 1.7-2.4 3.5" />
-          <circle cx={12} cy={17} r={0.6} fill="currentColor" stroke="none" />
-        </svg>
-      </button>
+      <ToolFlyout engine={engine} snapshot={snapshot} anchorRect={anchorRect} closed={flyoutClosed} />
     </aside>
   )
 }
