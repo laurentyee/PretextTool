@@ -13,7 +13,7 @@ export default function Footer({ onHelp }: FooterProps) {
           rel="noreferrer"
           className="hidden whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.08em] text-fog/60 hover:text-fog sm:inline"
         >
-          Made by XX / GitHub
+          Made by Laurent Yee / GitHub
         </a>
         <button
           type="button"
