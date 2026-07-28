@@ -23,10 +23,10 @@ Most websites and UIs have similar grid or column-based layouts. This is largely
 
 
 ### Tech stack
-[pretext.js](https://github.com/chenglou/pretext)
-React + TypeScript
-Tailwind CSS
-HTML + Canvas 2D
+- [pretext.js](https://github.com/chenglou/pretext)
+- React + TypeScript
+- Tailwind CSS
+- HTML + Canvas 2D
 
 ## Inspiration
 

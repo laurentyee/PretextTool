@@ -16,7 +16,6 @@ export default {
         iconbox: 'rgb(var(--color-icon-box) / <alpha-value>)',
         line: 'rgb(var(--color-line) / <alpha-value>)',
         fog: 'rgb(var(--color-fog) / <alpha-value>)',
-        lime: '#d4ff3d',
         accent: '#40A0CD',
         brush: {
           1: 'var(--color-brush-1)',

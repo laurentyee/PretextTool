@@ -8,6 +8,7 @@ type ToolFlyoutProps = {
   snapshot: SceneSnapshot
   anchorRect: DOMRect | null
   closed: boolean
+  onPick: () => void
 }
 
 const FLYOUT_GAP = 10
@@ -15,7 +16,7 @@ const NUB = 12
 
 const LABELS = { brush: 'BRUSH', sticker: 'IMAGE' } as const
 
-export default function ToolFlyout({ engine, snapshot, anchorRect, closed }: ToolFlyoutProps) {
+export default function ToolFlyout({ engine, snapshot, anchorRect, closed, onPick }: ToolFlyoutProps) {
   const open = (snapshot.tool === 'brush' || snapshot.tool === 'sticker') && !closed
   if (!open || !anchorRect) return null
 
@@ -37,7 +38,10 @@ export default function ToolFlyout({ engine, snapshot, anchorRect, closed }: Too
               type="button"
               title="Rainbow"
               aria-label="Set brush gradient rainbow"
-              onClick={() => engine?.setColor('rainbow')}
+              onClick={() => {
+                engine?.setColor('rainbow')
+                onPick()
+              }}
               style={{ background: gradientCssPreview('rainbow') }}
               className={cx(
                 'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
@@ -48,7 +52,10 @@ export default function ToolFlyout({ engine, snapshot, anchorRect, closed }: Too
               type="button"
               title="Warm"
               aria-label="Set brush gradient warm"
-              onClick={() => engine?.setColor('warm')}
+              onClick={() => {
+                engine?.setColor('warm')
+                onPick()
+              }}
               style={{ background: gradientCssPreview('warm') }}
               className={cx(
                 'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
@@ -59,7 +66,10 @@ export default function ToolFlyout({ engine, snapshot, anchorRect, closed }: Too
               type="button"
               title="Monet"
               aria-label="Set brush gradient monet"
-              onClick={() => engine?.setColor('monet')}
+              onClick={() => {
+                engine?.setColor('monet')
+                onPick()
+              }}
               style={{ background: gradientCssPreview('monet') }}
               className={cx(
                 'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
@@ -70,7 +80,10 @@ export default function ToolFlyout({ engine, snapshot, anchorRect, closed }: Too
               type="button"
               title="Candy"
               aria-label="Set brush gradient candy"
-              onClick={() => engine?.setColor('candy')}
+              onClick={() => {
+                engine?.setColor('candy')
+                onPick()
+              }}
               style={{ background: gradientCssPreview('candy') }}
               className={cx(
                 'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
@@ -81,7 +94,10 @@ export default function ToolFlyout({ engine, snapshot, anchorRect, closed }: Too
               type="button"
               title="Citrus"
               aria-label="Set brush gradient citrus"
-              onClick={() => engine?.setColor('citrus')}
+              onClick={() => {
+                engine?.setColor('citrus')
+                onPick()
+              }}
               style={{ background: gradientCssPreview('citrus') }}
               className={cx(
                 'h-[22px] w-[22px] cursor-pointer rounded-full border-2 border-white/15 p-0',
@@ -111,7 +127,10 @@ export default function ToolFlyout({ engine, snapshot, anchorRect, closed }: Too
                 type="button"
                 title={s.label}
                 aria-label={`Use sticker ${s.label}`}
-                onClick={() => engine?.setStickerId(s.id)}
+                onClick={() => {
+                  engine?.setStickerId(s.id)
+                  onPick()
+                }}
                 className={cx(
                   'h-7 w-7 cursor-pointer overflow-hidden rounded-md border-2 border-white/15 p-0',
                   s.id === snapshot.stickerId && 'border-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]',
