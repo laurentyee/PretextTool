@@ -1,7 +1,9 @@
+import brushCursorUrl from '../../../assets/icons/Brush-Filled.svg'
 import { readCssVar } from '../utils/readStyle'
 import { drawStrokePath, pointsBbox, transformedPoints, type Bbox, type Point, type StrokeMark } from '../doodleGeometry'
 
 const BRUSH_BLUR = readCssVar('--blur-brush')
+export const BRUSH_CURSOR = `url(${brushCursorUrl}) 8 39, auto`
 
 export function bboxForStroke(mark: StrokeMark): Bbox {
   return pointsBbox(transformedPoints(mark), (mark.width * mark.scale) / 2 + 8)

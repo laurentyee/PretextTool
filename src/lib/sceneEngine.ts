@@ -8,10 +8,11 @@ import {
   type ParagraphState,
   type TextDraw,
 } from './textFlow'
-import { DEFAULT_GRADIENT_ID, createBrushMark, drawBrushHoverRing, drawBrushMark } from './tools/brush'
+import { BRUSH_CURSOR, DEFAULT_GRADIENT_ID, createBrushMark, drawBrushHoverRing, drawBrushMark } from './tools/brush'
 import { applyDrag, applyScale, beginDrag, beginScale, drawSelection, hitTest, type DragInfo, type ScaleInfo } from './tools/select'
 import { createStickerMark, drawStickerMark, DEFAULT_STICKER_ID, loadStickerImage, STICKERS } from './tools/sticker'
 import { fontStack, type FontFamily } from './tools/fontSwap'
+import { cursorForTool, SELECT_CURSOR, SELECT_HANDLE_CURSOR } from './utils/cursor'
 import { readCssVar } from './utils/readStyle'
 
 export type Tool = 'brush' | 'select' | 'sticker'
@@ -73,6 +74,7 @@ export class SceneEngine {
     this.canvas = canvas
     this.stage = stage
     this.sourceText = sourceText
+    this.canvas.style.cursor = cursorForTool(this.tool, BRUSH_CURSOR)
 
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('2D canvas context unavailable')
@@ -138,6 +140,7 @@ export class SceneEngine {
   // ---------- public controls ----------
   setTool(tool: Tool): void {
     this.tool = tool
+    this.canvas.style.cursor = cursorForTool(this.tool, BRUSH_CURSOR)
     this.scheduleFrame()
     this.notify()
   }
@@ -348,6 +351,7 @@ export class SceneEngine {
       this.marks.push(mark)
       this.selectedId = mark.id
       this.tool = 'select'
+      this.canvas.style.cursor = cursorForTool(this.tool, BRUSH_CURSOR)
       this.markDirty()
       this.notify()
       return
@@ -396,6 +400,11 @@ export class SceneEngine {
       this.markDirty()
       this.notify()
       return
+    }
+
+    if (this.tool === 'select') {
+      const hit = hitTest(this.marks, this.selectedId, p)
+      this.canvas.style.cursor = hit?.handle ? SELECT_HANDLE_CURSOR : SELECT_CURSOR
     }
 
     this.scheduleFrame()
