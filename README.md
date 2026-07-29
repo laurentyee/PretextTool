@@ -27,6 +27,7 @@ Most websites and UIs have similar grid or column-based layouts. This is largely
 - React + TypeScript
 - Tailwind CSS
 - HTML + Canvas 2D
+- Vite
 
 ### Icons
 
