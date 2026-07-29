@@ -28,15 +28,19 @@ Most websites and UIs have similar grid or column-based layouts. This is largely
 - Tailwind CSS
 - HTML + Canvas 2D
 
+### Icons
+
+Icons hand-drawn illustrations by me!
+
 ## Inspiration
 
 A collection of mini design tools which have greatly inspired me in the making of this!
 
-https://notwk.london/ 
-https://spacetypegenerator.com/
-https://www.aspektedesrasters.de/
-https://danqiqian321.github.io/pretext/ (animation tool using pretext)
-https://chenglou.me/pretext/ (mini demo tools for pretext.js by the developer)
+- https://notwk.london/ 
+- https://spacetypegenerator.com/
+- https://www.aspektedesrasters.de/
+- https://danqiqian321.github.io/pretext/ (animation tool using pretext)
+- https://chenglou.me/pretext/ (mini demo tools for pretext.js by the developer)
 
 ### Credits for text and images used:
 
