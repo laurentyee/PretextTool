@@ -14,22 +14,22 @@ export default function HelpModal({ open, onClose }: HelpModalProps) {
       )}
     >
       <div className="w-full max-w-[440px] rounded-[18px] border border-line bg-panel p-9 text-fog">
-        <h2 className="m-0 mb-0.5 font-serif text-[36px] text-white">embellish the text</h2>
-        <p className="m-0 mb-[22px] text-[11px] uppercase tracking-[0.1em] text-accent">a live demo of pretext.js</p>
+        <h2 className="m-0 mb-0.5 font-serif text-[36px] text-color-ink">embellish the text</h2>
+        <p className="m-0 mb-[22px] text-[11px] uppercase tracking-[0.1em] text-color-ink">a live demo of pretext.js</p>
         <ol className="m-0 mb-[26px] list-decimal space-y-2 pl-[18px] text-[13.5px] leading-[1.7] text-fog">
           <li>
-            <b className="text-white">Brush</b> — draw on the canvas. The paragraph reflows live around whatever you make.
+            <b className="text-color-ink">Brush</b> — draw on the canvas. The paragraph reflows live around whatever you make.
           </li>
           <li>
-            <b className="text-white">Select / Move</b> — click a shape to grab it, drag the corner handle to resize it.
+            <b className="text-color-ink">Select / Move</b> — click a shape to grab it, drag the corner handle to resize it.
             Text keeps recalculating as it moves.
           </li>
           <li>Change brush colours, size and stickers upon selecting brush or sticker tools!</li>
           <li>
-            <b className="text-white">Undo</b> and <b className="text-white">Redo</b> help you edit safely, while clicking the <b className="text-white">Trash icon </b> wipes the canvas.
+            <b className="text-color-ink">Undo</b> and <b className="text-color-ink">Redo</b> help you edit safely, while clicking the <b className="text-color-ink">Trash icon </b> wipes the canvas.
           </li>
           <li>
-            Change <b className="text-white">theme</b> and <b className="text-white">font</b> too!
+            Change <b className="text-color-ink">theme</b> and <b className="text-color-ink">font</b> too!
           </li>
         </ol>
         <button

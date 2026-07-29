@@ -22,7 +22,7 @@ function getInitialThemeId(): string {
 export default function App() {
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [helpOpen, setHelpOpen] = useState(true)
+  const [helpOpen, setHelpOpen] = useState(false)
   const [themeId, setThemeId] = useState<string>(getInitialThemeId)
 
   const { engine, snapshot } = useSceneEngine(canvasRef, stageRef, sourceText)
